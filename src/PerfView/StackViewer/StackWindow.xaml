@@ -489,6 +489,12 @@
                         </Canvas.ContextMenu>
                     </src:FlameGraphDrawingCanvas>
                 </TabItem>
+                <TabItem Name="TimelineTab">
+                    <TabItem.Header>
+                        Timeline
+                    </TabItem.Header>
+                    <src:TimelineView x:Name="Timeline"/>
+                </TabItem>
                 <!-- NotesTab -->
                 <TabItem Name="NotesTab" GotFocus="NotesTab_GotFocus" LostFocus="NotesTab_LostFocus">
                     <TabItem.Header>

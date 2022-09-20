@@ -454,6 +454,7 @@ namespace PerfView
                     }
 
                     RedrawFlameGraphIfVisible();
+                    _ = Timeline.InitializeAsync(newCallTree);
 
                     TopStats.Text = stats;
 
