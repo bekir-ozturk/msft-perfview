@@ -3,6 +3,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
     xmlns:src="clr-namespace:PerfView"
+    xmlns:src2="clr-namespace:PerfView.StackViewer"
     xmlns:src1="clr-namespace:PerfView"
     xmlns:controls="clr-namespace:Controls"
     Title="PerfView Stacks"
@@ -481,13 +482,13 @@
                             Flame Graph <Hyperlink Command="Help" CommandParameter="FlameGraphView">?</Hyperlink>
                         </TextBlock>
                     </TabItem.Header>
-                    <src:FlameGraphDrawingCanvas x:Name="FlameGraphCanvas" Background="White" ClipToBounds="True" SizeChanged="FlameGraphCanvas_SizeChanged" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged">
+                    <src2:FlameGraphDrawingCanvas x:Name="FlameGraphCanvas" Background="White" ClipToBounds="True" SizeChanged="FlameGraphCanvas_SizeChanged" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged">
                         <Canvas.ContextMenu>
                             <ContextMenu Name="noContextMenu" Visibility="Visible">
                                 <MenuItem Header="Save Flame Graph" Command="{x:Static src:StackWindow.SaveFlameGraphCommand}" />
                             </ContextMenu>
                         </Canvas.ContextMenu>
-                    </src:FlameGraphDrawingCanvas>
+                    </src2:FlameGraphDrawingCanvas>
                 </TabItem>
                 <!-- NotesTab -->
                 <TabItem Name="NotesTab" GotFocus="NotesTab_GotFocus" LostFocus="NotesTab_LostFocus">

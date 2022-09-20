@@ -8,9 +8,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using static PerfView.FlameGraph;
 
-namespace PerfView
+namespace PerfView.StackViewer
 {
-    public class FlameGraphDrawingCanvas : Canvas
+    public class FlameGraphDrawingCanvas : PanZoomCanvas
     {
         private static readonly Typeface Typeface = new Typeface("Consolas");
 
@@ -23,24 +23,24 @@ namespace PerfView
         private readonly CheckBox _panYAxis = new CheckBox();
         private readonly CheckBox _invertAxis = new CheckBox();
 
-        private List<Visual> visuals = new List<Visual>();
-        private FlameBoxesMap flameBoxesMap = new FlameBoxesMap();
-        private ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
-        private ScaleTransform scaleTransform = new ScaleTransform(1.0f, 1.0f, 0.0f, 0.0f);
-        private Cursor cursor;
+        private readonly List<Visual> visuals = new List<Visual>();
+        private readonly FlameBoxesMap flameBoxesMap = new FlameBoxesMap();
+        private readonly ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
+
+        private readonly Cursor cursor;
 
         public FlameGraphDrawingCanvas()
         {
             _panningGroupBox.Header = "Panning";
-            var stackPanel = new StackPanel();
+            StackPanel stackPanel = new StackPanel();
             AddCheckBox(_panXAxis, "X-Axis", stackPanel);
             AddCheckBox(_panYAxis, "Y-Axis", stackPanel);
             AddCheckBox(_invertAxis, "Invert Axis", stackPanel);
             _panningGroupBox.Content = stackPanel;
-            Children.Add(_panningGroupBox);
+            _ = Children.Add(_panningGroupBox);
 
-            MouseMove += OnMouseMove;
-            MouseLeave += OnMouseLeave;
+            //MouseMove += OnMouseMove;
+            //MouseLeave += OnMouseLeave;
             PreviewMouseWheel += OnPreviewMouseWheel;
             MouseLeftButtonDown += OnMouseLeftButtonDown;
             MouseLeftButtonUp += OnMouseLeftButtonUp;
@@ -54,9 +54,7 @@ namespace PerfView
 
         protected override Visual GetVisualChild(int index)
         {
-            if (index == 0)
-                return _panningGroupBox;
-            return visuals[index - 1];
+            return index == 0 ? _panningGroupBox : visuals[index - 1];
         }
 
         private bool IsZoomed => scaleTransform.ScaleX != 1.0;
@@ -65,16 +63,16 @@ namespace PerfView
         {
             Clear();
 
-            var visual = new DrawingVisual { Transform = scaleTransform }; // we have only one visual to provide best possible perf
+            DrawingVisual visual = new DrawingVisual { Transform = transformGroup }; // we have only one visual to provide best possible perf
 
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
                 int index = 0;
                 System.Drawing.Font forSize = null;
 
-                foreach (var box in boxes)
+                foreach (FlameBox box in boxes)
                 {
-                    var brush = Brushes[box.Node.InclusiveMetric < 0 ? 1 : 0][index++ % Brushes.Length]; // use second brush set (aqua theme) for negative metrics
+                    Brush brush = Brushes[box.Node.InclusiveMetric < 0 ? 1 : 0][index++ % Brushes.Length]; // use second brush set (aqua theme) for negative metrics
 
                     drawingContext.DrawRectangle(
                         brush,
@@ -88,16 +86,17 @@ namespace PerfView
                             forSize = new System.Drawing.Font("Consolas", (float)box.Height, System.Drawing.GraphicsUnit.Pixel);
                         }
 
-                        var text = new FormattedText(
+                        FormattedText text = new FormattedText(
                                 box.Node.DisplayName,
                                 CultureInfo.InvariantCulture,
                                 FlowDirection.LeftToRight,
                                 Typeface,
                                 Math.Min(forSize.SizeInPoints, 20),
-                                System.Windows.Media.Brushes.Black);
-
-                        text.MaxTextWidth = box.Width;
-                        text.MaxTextHeight = box.Height;
+                                System.Windows.Media.Brushes.Black)
+                        {
+                            MaxTextWidth = box.Width,
+                            MaxTextHeight = box.Height
+                        };
 
                         drawingContext.DrawText(text, new Point(box.X, box.Y));
                     }
@@ -116,25 +115,26 @@ namespace PerfView
         /// </summary>
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (!IsEmpty && e.LeftButton == MouseButtonState.Released)
-            {
-                var position = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
-                var tooltipText = flameBoxesMap.Find(position);
-                if (tooltipText != null)
-                {
-                    ShowTooltip(tooltipText);
-                    CurrentFlameBoxChanged(this, tooltipText);
-                    return;
-                }
-            }
-            else if (!IsEmpty && e.LeftButton == MouseButtonState.Pressed && IsZoomed)
-            {
-                var transform = _invertAxis.IsChecked.Value ? scaleTransform : scaleTransform.Inverse;
-                var relativeMousePosition = transform.Transform(Mouse.GetPosition(this));
-                var x = _panXAxis.IsChecked.Value ?  relativeMousePosition.X : scaleTransform.CenterX;
-                var y = _panYAxis.IsChecked.Value ? relativeMousePosition.Y : scaleTransform.CenterY;
-                MoveZoomingCenterPoint(x, y);
-            }
+            //if (!IsEmpty && e.LeftButton == MouseButtonState.Released)
+            //{
+            //    var position = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
+            //    var tooltipText = flameBoxesMap.Find(position);
+            //    if (tooltipText != null)
+            //    {
+            //        ShowTooltip(tooltipText);
+            //        CurrentFlameBoxChanged(this, tooltipText);
+            //        return;
+            //    }
+            //}
+            //else if (!IsEmpty && e.LeftButton == MouseButtonState.Pressed && IsZoomed)
+            //{
+            //    var newPosition = e.GetPosition(this);
+            //    var transform = _invertAxis.IsChecked.Value ? scaleTransform : scaleTransform.Inverse;
+            //    var relativeMousePosition = transform.Transform(Mouse.GetPosition(this));
+            //    var x = _panXAxis.IsChecked.Value ?  relativeMousePosition.X : scaleTransform.CenterX;
+            //    var y = _panYAxis.IsChecked.Value ? relativeMousePosition.Y : scaleTransform.CenterY;
+            //    MoveZoomingCenterPoint(x, y);
+            //}
 
             HideTooltip();
         }
@@ -147,25 +147,28 @@ namespace PerfView
 
         private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            float modifier = e.Delta > 0 ? 1.1f : 0.9f;
+            //float modifier = e.Delta > 0 ? 1.1f : 0.9f;
 
-            var relativeMousePosition = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
+            //Point relativeMousePosition = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
 
-            scaleTransform.ScaleX = Math.Max(1.0, scaleTransform.ScaleX * modifier);
-            scaleTransform.ScaleY = Math.Max(1.0, scaleTransform.ScaleY * modifier);
-            scaleTransform.CenterX = relativeMousePosition.X;
-            scaleTransform.CenterY = relativeMousePosition.Y;
+            //scaleTransform.ScaleX = Math.Max(1.0, scaleTransform.ScaleX * modifier);
+            //scaleTransform.ScaleY = Math.Max(1.0, scaleTransform.ScaleY * modifier);
+            //scaleTransform.CenterX = relativeMousePosition.X;
+            //scaleTransform.CenterY = relativeMousePosition.Y;
 
-            Keyboard.Focus(this); // make it possible to handle Arrow keys and move CenterX & Y scaling points
+            //_ = Keyboard.Focus(this); // make it possible to handle Arrow keys and move CenterX & Y scaling points
         }
+
+        private Point _basePoint;
 
         private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (IsZoomed)
-            {
-                cursor = Mouse.OverrideCursor;
-                Mouse.OverrideCursor = Cursors.Hand; // emulate drag&drop cursor style
-            }
+            //if (IsZoomed)
+            //{
+            //    cursor = Mouse.OverrideCursor;
+            //    Mouse.OverrideCursor = Cursors.Hand; // emulate drag&drop cursor style
+            //    _basePoint = e.GetPosition(this);
+            //}
         }
 
         private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -178,37 +181,37 @@ namespace PerfView
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (!IsZoomed)
-            {
-                return;
-            }
+            //if (!IsZoomed)
+            //{
+            //    return;
+            //}
 
-            switch (e.Key)
-            {
-                case Key.Left:
-                    MoveZoomingCenterPoint(scaleTransform.CenterX * 0.9, scaleTransform.CenterY);
-                    e.Handled = true;
-                    break;
-                case Key.Right:
-                    MoveZoomingCenterPoint(scaleTransform.CenterX * 1.1, scaleTransform.CenterY);
-                    e.Handled = true;
-                    break;
-                case Key.Up:
-                    MoveZoomingCenterPoint(scaleTransform.CenterX, scaleTransform.CenterY * 0.9);
-                    e.Handled = true;
-                    break;
-                case Key.Down:
-                    MoveZoomingCenterPoint(scaleTransform.CenterX, scaleTransform.CenterY * 1.1);
-                    e.Handled = true;
-                    break;
-                default:
-                    break;
-            }
+            //switch (e.Key)
+            //{
+            //    case Key.Left:
+            //        MoveZoomingCenterPoint(scaleTransform.CenterX * 0.9, scaleTransform.CenterY);
+            //        e.Handled = true;
+            //        break;
+            //    case Key.Right:
+            //        MoveZoomingCenterPoint(scaleTransform.CenterX * 1.1, scaleTransform.CenterY);
+            //        e.Handled = true;
+            //        break;
+            //    case Key.Up:
+            //        MoveZoomingCenterPoint(scaleTransform.CenterX, scaleTransform.CenterY * 0.9);
+            //        e.Handled = true;
+            //        break;
+            //    case Key.Down:
+            //        MoveZoomingCenterPoint(scaleTransform.CenterX, scaleTransform.CenterY * 1.1);
+            //        e.Handled = true;
+            //        break;
+            //    default:
+            //        break;
+            //}
         }
 
         private void ShowTooltip(string text)
         {
-            if (object.ReferenceEquals(tooltip.Content, text) && tooltip.IsOpen)
+            if (ReferenceEquals(tooltip.Content, text) && tooltip.IsOpen)
             {
                 return;
             }
@@ -220,7 +223,10 @@ namespace PerfView
             tooltip.PlacementTarget = this;
         }
 
-        private void HideTooltip() => tooltip.IsOpen = false;
+        private void HideTooltip()
+        {
+            tooltip.IsOpen = false;
+        }
 
         private void Clear()
         {
@@ -237,14 +243,14 @@ namespace PerfView
         {
             visuals.Add(visual);
 
-            base.AddVisualChild(visual);
-            base.AddLogicalChild(visual);
+            AddVisualChild(visual);
+            AddLogicalChild(visual);
         }
 
         private void DeleteVisual(Visual visual)
         {
-            base.RemoveVisualChild(visual);
-            base.RemoveLogicalChild(visual);
+            RemoveVisualChild(visual);
+            RemoveLogicalChild(visual);
         }
 
         private void MoveZoomingCenterPoint(double x, double y)
@@ -256,31 +262,34 @@ namespace PerfView
             }
         }
 
-        private void ResetCursor() => Mouse.OverrideCursor = cursor;
+        private void ResetCursor()
+        {
+            Mouse.OverrideCursor = cursor;
+        }
 
         private static Brush[][] GenerateBrushes(Random random)
         {
-            var brushes = new Brush[][]
+            Brush[][] brushes = new Brush[][]
             {
                 Enumerable.Range(0, 100)
                     .Select(_ => (Brush)new SolidColorBrush(
                         Color.FromRgb(
-                            (byte)(205.0 + 50.0 * random.NextDouble()),
+                            (byte)(205.0 + (50.0 * random.NextDouble())),
                             (byte)(230.0 * random.NextDouble()),
                             (byte)(55.0 * random.NextDouble()))))
                     .ToArray(),
                 Enumerable.Range(0, 100)
                     .Select(_ => (Brush)new SolidColorBrush(
                         Color.FromRgb(
-                            (byte)(50 + 60.0 * random.NextDouble()),
-                            (byte)(165 + 55.0 * random.NextDouble()),
-                            (byte)(165.0 + 55.0 * random.NextDouble()))))
+                            (byte)(50 + (60.0 * random.NextDouble())),
+                            (byte)(165 + (55.0 * random.NextDouble())),
+                            (byte)(165.0 + (55.0 * random.NextDouble())))))
                     .ToArray()
             };
 
-            foreach (var brushArray in brushes)
+            foreach (Brush[] brushArray in brushes)
             {
-                foreach (var brush in brushArray)
+                foreach (Brush brush in brushArray)
                 {
                     brush.Freeze(); // this is crucial for performance
                 }
@@ -294,20 +303,23 @@ namespace PerfView
             checkBox.Content = text;
             checkBox.IsChecked = true;
             checkBox.Margin = new Thickness(2);
-            stackPanel.Children.Add(checkBox);
+            _ = stackPanel.Children.Add(checkBox);
         }
 
         private class FlameBoxesMap
         {
-            private SortedDictionary<Range, List<FlameBox>> boxesMap = new SortedDictionary<Range, List<FlameBox>>();
+            private readonly SortedDictionary<Range, List<FlameBox>> boxesMap = new SortedDictionary<Range, List<FlameBox>>();
 
-            internal void Clear() => boxesMap.Clear();
+            internal void Clear()
+            {
+                boxesMap.Clear();
+            }
 
             internal void Add(FlameBox flameBox)
             {
-                var row = new Range(flameBox.Y, flameBox.Y + flameBox.Height);
+                Range row = new Range(flameBox.Y, flameBox.Y + flameBox.Height);
 
-                if (!boxesMap.TryGetValue(row, out var list))
+                if (!boxesMap.TryGetValue(row, out List<FlameBox> list))
                 {
                     boxesMap.Add(row, list = new List<FlameBox>());
                 }
@@ -317,7 +329,7 @@ namespace PerfView
 
             internal void Sort()
             {
-                foreach (var row in boxesMap.Values)
+                foreach (List<FlameBox> row in boxesMap.Values)
                 {
                     row.Sort(CompareByX); // sort the boxes from left to the right
                 }
@@ -325,7 +337,7 @@ namespace PerfView
 
             internal string Find(Point point)
             {
-                foreach (var rowData in boxesMap)
+                foreach (KeyValuePair<Range, List<FlameBox>> rowData in boxesMap)
                 {
                     if (rowData.Key.Contains(point.Y))
                     {
@@ -339,7 +351,7 @@ namespace PerfView
                             {
                                 high = mid - 1;
                             }
-                            else if ((rowData.Value[mid].X + rowData.Value[mid].Width) < point.X)
+                            else if (rowData.Value[mid].X + rowData.Value[mid].Width < point.X)
                             {
                                 low = mid + 1;
                             }
@@ -349,21 +361,21 @@ namespace PerfView
                             }
                         }
 
-                        if (rowData.Value[mid].X <= point.X && point.X <= (rowData.Value[mid].X + rowData.Value[mid].Width))
-                        {
-                            return rowData.Value[mid].TooltipText;
-                        }
-
-                        return null;
+                        return rowData.Value[mid].X <= point.X && point.X <= rowData.Value[mid].X + rowData.Value[mid].Width
+                            ? rowData.Value[mid].TooltipText
+                            : null;
                     }
                 }
 
                 return null;
             }
 
-            private static int CompareByX(FlameBox left, FlameBox right) => left.X.CompareTo(right.X);
+            private static int CompareByX(FlameBox left, FlameBox right)
+            {
+                return left.X.CompareTo(right.X);
+            }
 
-            private struct Range : IEquatable<Range>, IComparable<Range>
+            private readonly struct Range : IEquatable<Range>, IComparable<Range>
             {
                 private readonly double Start, End;
 
@@ -373,15 +385,30 @@ namespace PerfView
                     End = end;
                 }
 
-                internal bool Contains(double y) => Start <= y && y <= End;
+                internal bool Contains(double y)
+                {
+                    return Start <= y && y <= End;
+                }
 
-                public override bool Equals(object obj) => throw new InvalidOperationException("No boxing");
+                public override bool Equals(object obj)
+                {
+                    throw new InvalidOperationException("No boxing");
+                }
 
-                public bool Equals(Range other) => other.Start == Start && other.End == End;
+                public bool Equals(Range other)
+                {
+                    return other.Start == Start && other.End == End;
+                }
 
-                public int CompareTo(Range other) => other.Start.CompareTo(Start);
+                public int CompareTo(Range other)
+                {
+                    return other.Start.CompareTo(Start);
+                }
 
-                public override int GetHashCode() => (Start * End).GetHashCode();
+                public override int GetHashCode()
+                {
+                    return (Start * End).GetHashCode();
+                }
             }
         }
     }
