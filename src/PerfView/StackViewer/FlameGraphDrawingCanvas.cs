@@ -14,8 +14,6 @@ namespace PerfView
     {
         private static readonly Typeface Typeface = new Typeface("Consolas");
 
-        private static readonly Brush[][] Brushes = GenerateBrushes(new Random(12345));
-
         public event EventHandler<string> CurrentFlameBoxChanged;
 
         private List<Visual> visuals = new List<Visual>();
@@ -43,20 +41,47 @@ namespace PerfView
 
         private bool IsZoomed => scaleTransform.ScaleX != 1.0;
 
+        private Dictionary<FlameColor, Color> colorsMapping = new Dictionary<FlameColor, Color>() {
+            {FlameColor.Grey,  Color.FromRgb(128, 128, 128)},
+            {FlameColor.Brown,  Color.FromRgb(181, 101, 29)},
+            {FlameColor.Blue,  Color.FromRgb(65, 105, 225)},
+            {FlameColor.Red,  Color.FromRgb(255, 0, 0)}
+        };
+
+        private List<Color> greenShades = new List<Color>(){
+                Color.FromRgb(11, 102, 35),
+                Color.FromRgb(112, 130, 56),
+                Color.FromRgb(63, 112, 77),
+                Color.FromRgb(143, 151, 121),
+                Color.FromRgb(41, 171, 135),
+                Color.FromRgb(0, 117, 94),
+                Color.FromRgb(59, 122, 87),
+                Color.FromRgb(28, 53, 45)
+            };
+
         public void Draw(IEnumerable<FlameBox> boxes)
         {
             Clear();
 
+            var random = new Random(11);
             var visual = new DrawingVisual { Transform = scaleTransform }; // we have only one visual to provide best possible perf
 
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
-                int index = 0;
                 System.Drawing.Font forSize = null;
 
                 foreach (var box in boxes)
                 {
-                    var brush = Brushes[box.Node.InclusiveMetric < 0 ? 1 : 0][index++ % Brushes.Length]; // use second brush set (aqua theme) for negative metrics
+
+                    SolidColorBrush brush;
+                    if (box.Color == FlameColor.Default)
+                    {
+                        var id = random.Next(8);
+                        brush = new SolidColorBrush(greenShades[id]);
+                    }
+                    else {
+                        brush = new SolidColorBrush(colorsMapping[box.Color]);
+                    }
 
                     drawingContext.DrawRectangle(
                         brush,
@@ -236,37 +261,6 @@ namespace PerfView
         }
 
         private void ResetCursor() => Mouse.OverrideCursor = cursor;
-
-        private static Brush[][] GenerateBrushes(Random random)
-        {
-            var brushes = new Brush[][]
-            {
-                Enumerable.Range(0, 100)
-                    .Select(_ => (Brush)new SolidColorBrush(
-                        Color.FromRgb(
-                            (byte)(205.0 + 50.0 * random.NextDouble()),
-                            (byte)(230.0 * random.NextDouble()),
-                            (byte)(55.0 * random.NextDouble()))))
-                    .ToArray(),
-                Enumerable.Range(0, 100)
-                    .Select(_ => (Brush)new SolidColorBrush(
-                        Color.FromRgb(
-                            (byte)(50 + 60.0 * random.NextDouble()),
-                            (byte)(165 + 55.0 * random.NextDouble()),
-                            (byte)(165.0 + 55.0 * random.NextDouble()))))
-                    .ToArray()
-            };
-
-            foreach (var brushArray in brushes)
-            {
-                foreach (var brush in brushArray)
-                {
-                    brush.Freeze(); // this is crucial for performance
-                }
-            }
-
-            return brushes;
-        }
 
         private class FlameBoxesMap
         {

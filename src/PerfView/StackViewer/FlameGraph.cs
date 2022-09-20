@@ -19,6 +19,14 @@ namespace PerfView
             public readonly double Width, Height, X, Y;
             public readonly CallTreeNode Node;
             public string TooltipText;
+            public FlameColor Color;
+
+            private static Dictionary<string, FlameColor> mappingToColor = new Dictionary<string, FlameColor> {
+                { "ROOT", FlameColor.Grey },
+                { "Process", FlameColor.Brown },
+                { "Thread", FlameColor.Blue },
+                { "BROKEN", FlameColor.Red },
+            };
 
             public FlameBox(CallTreeNode node, double width, double height, double x, double y)
             {
@@ -28,7 +36,25 @@ namespace PerfView
                 Height = height;
                 X = x;
                 Y = y;
+
+
+                Color = FlameColor.Default; 
+                foreach (var startWith in mappingToColor) {
+                    if (node.DisplayName.StartsWith(startWith.Key))
+                    {
+                        Color = startWith.Value;
+                    }
+                }
             }
+        }
+
+        public enum FlameColor
+        {
+            Grey,
+            Brown,
+            Blue,
+            Red,
+            Default
         }
 
         private struct FlamePair
