@@ -40,6 +40,8 @@ namespace PerfView
             var firstCallee = root.Callees[0];
             var firstCalleeName = firstCallee.Name;
 
+            DataView.Visibility = System.Windows.Visibility.Visible;
+            InfoLabel.Visibility = System.Windows.Visibility.Collapsed;
             IsInitialized = true;
         }
     }
