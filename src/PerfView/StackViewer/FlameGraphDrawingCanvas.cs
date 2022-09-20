@@ -18,6 +18,11 @@ namespace PerfView
 
         public event EventHandler<string> CurrentFlameBoxChanged;
 
+        private readonly GroupBox _panningGroupBox = new GroupBox();
+        private readonly CheckBox _panXAxis = new CheckBox();
+        private readonly CheckBox _panYAxis = new CheckBox();
+        private readonly CheckBox _invertAxis = new CheckBox();
+
         private List<Visual> visuals = new List<Visual>();
         private FlameBoxesMap flameBoxesMap = new FlameBoxesMap();
         private ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
@@ -26,6 +31,14 @@ namespace PerfView
 
         public FlameGraphDrawingCanvas()
         {
+            _panningGroupBox.Header = "Panning";
+            var stackPanel = new StackPanel();
+            AddCheckBox(_panXAxis, "X-Axis", stackPanel);
+            AddCheckBox(_panYAxis, "Y-Axis", stackPanel);
+            AddCheckBox(_invertAxis, "Invert Axis", stackPanel);
+            _panningGroupBox.Content = stackPanel;
+            Children.Add(_panningGroupBox);
+
             MouseMove += OnMouseMove;
             MouseLeave += OnMouseLeave;
             PreviewMouseWheel += OnPreviewMouseWheel;
@@ -37,9 +50,14 @@ namespace PerfView
 
         public bool IsEmpty => visuals.Count == 0;
 
-        protected override int VisualChildrenCount => visuals.Count;
+        protected override int VisualChildrenCount => visuals.Count + 1;
 
-        protected override Visual GetVisualChild(int index) => visuals[index];
+        protected override Visual GetVisualChild(int index)
+        {
+            if (index == 0)
+                return _panningGroupBox;
+            return visuals[index - 1];
+        }
 
         private bool IsZoomed => scaleTransform.ScaleX != 1.0;
 
@@ -111,8 +129,11 @@ namespace PerfView
             }
             else if (!IsEmpty && e.LeftButton == MouseButtonState.Pressed && IsZoomed)
             {
-                var relativeMousePosition = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
-                MoveZoomingCenterPoint(relativeMousePosition.X, relativeMousePosition.Y);
+                var transform = _invertAxis.IsChecked.Value ? scaleTransform : scaleTransform.Inverse;
+                var relativeMousePosition = transform.Transform(Mouse.GetPosition(this));
+                var x = _panXAxis.IsChecked.Value ?  relativeMousePosition.X : scaleTransform.CenterX;
+                var y = _panYAxis.IsChecked.Value ? relativeMousePosition.Y : scaleTransform.CenterY;
+                MoveZoomingCenterPoint(x, y);
             }
 
             HideTooltip();
@@ -266,6 +287,14 @@ namespace PerfView
             }
 
             return brushes;
+        }
+
+        private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
+        {
+            checkBox.Content = text;
+            checkBox.IsChecked = true;
+            checkBox.Margin = new Thickness(2);
+            stackPanel.Children.Add(checkBox);
         }
 
         private class FlameBoxesMap
