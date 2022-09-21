@@ -11,20 +11,32 @@ namespace PerfView.StackViewer
     {
         private const float _zoomfactor = 1.1f;
         protected readonly MatrixTransform _transform = new MatrixTransform();
+        private readonly StackPanel _controls = new StackPanel();
         private readonly GroupBox _panningGroupBox = new GroupBox();
         private readonly CheckBox _panXAxis = new CheckBox();
         private readonly CheckBox _panYAxis = new CheckBox();
+        private readonly GroupBox _zoomGroupBox = new GroupBox();
+        private readonly CheckBox _zoomXAxis = new CheckBox();
+        private readonly CheckBox _zoomYAxis = new CheckBox();
         protected readonly List<Visual> visuals = new List<Visual>();
         private Point _initialMousePosition;
+        private bool _isDragging;
 
         public PanAndZoomCanvas()
         {
             _panningGroupBox.Header = "Panning";
-            StackPanel stackPanel = new StackPanel();
-            AddCheckBox(_panXAxis, "X-Axis", stackPanel);
-            AddCheckBox(_panYAxis, "Y-Axis", stackPanel);
-            _panningGroupBox.Content = stackPanel;
-            _ = Children.Add(_panningGroupBox);
+            StackPanel panStackPanel = new StackPanel();
+            AddCheckBox(_panXAxis, "X-Axis", panStackPanel);
+            AddCheckBox(_panYAxis, "Y-Axis", panStackPanel);
+            _panningGroupBox.Content = panStackPanel;
+            _zoomGroupBox.Header = "Zoom";
+            StackPanel zoomStackPanel = new StackPanel();
+            AddCheckBox(_zoomXAxis, "X-Axis", zoomStackPanel);
+            AddCheckBox(_zoomYAxis, "Y-Axis", zoomStackPanel);
+            _zoomGroupBox.Content = zoomStackPanel;
+            _ = _controls.Children.Add(_panningGroupBox);
+            _ = _controls.Children.Add(_zoomGroupBox);
+            _ = Children.Add(_controls);
 
             KeyDown += PanAndZoomCanvas_KeyDown;
             MouseDown += PanAndZoomCanvas_MouseDown;
@@ -63,7 +75,8 @@ namespace PerfView.StackViewer
 
         protected override Visual GetVisualChild(int index)
         {
-            return index == 0 ? _panningGroupBox : visuals[index - 1];
+            //return index == 0 ? _panningGroupBox : index == 1 ? _zoomGroupBox : visuals[index - 2];
+            return index == 0 ? _controls : visuals[index - 1];
         }
 
         private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
@@ -80,17 +93,25 @@ namespace PerfView.StackViewer
             {
                 _initialMousePosition = _transform.Inverse.Transform(e.GetPosition(this));
                 Cursor = Cursors.Hand;
+                _isDragging = true;
             }
         }
 
         protected void PanAndZoomCanvas_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (e.LeftButton == MouseButtonState.Pressed && _isDragging)
             {
                 Point mousePosition = _transform.Inverse.Transform(e.GetPosition(this));
                 Vector delta = Point.Subtract(mousePosition, _initialMousePosition);
                 PanCanvas(delta);
             }
+        }
+
+        protected void PanAndZoomCanvas_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            _isDragging = false;
+            _initialMousePosition = default;
+            Cursor = Cursors.Arrow;
         }
 
         private void PanCanvas(Vector delta)
@@ -114,12 +135,6 @@ namespace PerfView.StackViewer
             }
         }
 
-        private void PanAndZoomCanvas_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            _initialMousePosition = default;
-            Cursor = Cursors.Arrow;
-        }
-
         private void PanAndZoomCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             float scaleFactor = _zoomfactor;
@@ -131,7 +146,10 @@ namespace PerfView.StackViewer
             Point mousePostion = e.GetPosition(this);
 
             Matrix scaleMatrix = _transform.Matrix;
-            scaleMatrix.ScaleAt(scaleFactor, scaleFactor, mousePostion.X, mousePostion.Y);
+            float scaleX = _zoomXAxis.IsChecked.Value ? scaleFactor : 1f;
+            float scaleY = _zoomYAxis.IsChecked.Value ? scaleFactor : 1f;
+
+            scaleMatrix.ScaleAt(scaleX, scaleY, mousePostion.X, mousePostion.Y);
             _transform.Matrix = scaleMatrix;
         }
     }

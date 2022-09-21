@@ -105,7 +105,7 @@ namespace PerfView.StackViewer
         private void OnMouseLeave(object sender, MouseEventArgs e)
         {
             HideTooltip();
-            Cursor = Cursors.Arrow;
+            PanAndZoomCanvas_MouseUp(sender, null);
         }
 
         private void ShowTooltip(string text)
