@@ -18,6 +18,6 @@
             </DockPanel>
             <Canvas Name="FocusCanvas" Background="BlueViolet"/>
         </DockPanel>
-        <Label Name="InfoLabel" HorizontalAlignment="Center" VerticalAlignment="Center" d:Visibility="Collapsed" >Failed to load</Label>
+        <Label Name="InfoLabel" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" >Failed to load</Label>
     </Grid>
 </UserControl>

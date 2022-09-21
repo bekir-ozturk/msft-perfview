@@ -1,5 +1,6 @@
 ﻿using Microsoft.Diagnostics.Tracing.Stacks;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
@@ -7,6 +8,10 @@ namespace PerfView
 {
     public partial class TimelineView : UserControl
     {
+        private CallTree _callTree = null;
+
+        private readonly TimelineVisuals _visuals = new TimelineVisuals();
+
         public bool IsInitialized { get; private set; } = false;
 
         public TimelineView()
@@ -16,33 +21,20 @@ namespace PerfView
 
         public async Task InitializeAsync(CallTree callTree)
         {
-            if (IsInitialized)
-            {
-                return;
-            }
-
-            if (callTree == null)
-            {
-                throw new ArgumentNullException(nameof(callTree));
-            }
-
-            if (callTree.Root == null)
-            {
-                throw new ArgumentException($"Argument {nameof(callTree)} must have a valid root.");
-            }
-
-            DataView.Visibility = System.Windows.Visibility.Collapsed;
-            InfoLabel.Visibility = System.Windows.Visibility.Visible;
-            InfoLabel.Content = "Timeline is loading...";
-
-            var root = callTree.Root;
-            var calleeCount = root.Callees.Count;
-            var firstCallee = root.Callees[0];
-            var firstCalleeName = firstCallee.Name;
-
-            DataView.Visibility = System.Windows.Visibility.Visible;
-            InfoLabel.Visibility = System.Windows.Visibility.Collapsed;
+            _callTree = callTree;
+            RepopulateVisualsData(_callTree, _visuals);
+            UpdateCanvas(_visuals);
             IsInitialized = true;
+        }
+
+        private void RepopulateVisualsData(CallTree callTree, TimelineVisuals visuals)
+        {
+            // To be implemented by Bekir
+        }
+
+        private void UpdateCanvas(TimelineVisuals visuals)
+        {
+            // To be implemented by Radek Barton
         }
     }
 }
