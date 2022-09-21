@@ -10,60 +10,31 @@ using static PerfView.FlameGraph;
 
 namespace PerfView.StackViewer
 {
-    public class FlameGraphDrawingCanvas : PanZoomCanvas
+    public class FlameGraphDrawingCanvas : PanAndZoomCanvas
     {
         private static readonly Typeface Typeface = new Typeface("Consolas");
-
         private static readonly Brush[][] Brushes = GenerateBrushes(new Random(12345));
-
         public event EventHandler<string> CurrentFlameBoxChanged;
-
-        private readonly GroupBox _panningGroupBox = new GroupBox();
-        private readonly CheckBox _panXAxis = new CheckBox();
-        private readonly CheckBox _panYAxis = new CheckBox();
-        private readonly CheckBox _invertAxis = new CheckBox();
-
-        private readonly List<Visual> visuals = new List<Visual>();
         private readonly FlameBoxesMap flameBoxesMap = new FlameBoxesMap();
         private readonly ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
-
         private readonly Cursor cursor;
 
         public FlameGraphDrawingCanvas()
         {
-            _panningGroupBox.Header = "Panning";
-            StackPanel stackPanel = new StackPanel();
-            AddCheckBox(_panXAxis, "X-Axis", stackPanel);
-            AddCheckBox(_panYAxis, "Y-Axis", stackPanel);
-            AddCheckBox(_invertAxis, "Invert Axis", stackPanel);
-            _panningGroupBox.Content = stackPanel;
-            _ = Children.Add(_panningGroupBox);
-
-            //MouseMove += OnMouseMove;
-            //MouseLeave += OnMouseLeave;
-            PreviewMouseWheel += OnPreviewMouseWheel;
-            MouseLeftButtonDown += OnMouseLeftButtonDown;
-            MouseLeftButtonUp += OnMouseLeftButtonUp;
-            PreviewKeyDown += OnPreviewKeyDown;
+            MouseMove += OnMouseMove;
+            MouseLeave += OnMouseLeave;
             Focusable = true;
         }
 
         public bool IsEmpty => visuals.Count == 0;
 
-        protected override int VisualChildrenCount => visuals.Count + 1;
-
-        protected override Visual GetVisualChild(int index)
-        {
-            return index == 0 ? _panningGroupBox : visuals[index - 1];
-        }
-
-        private bool IsZoomed => scaleTransform.ScaleX != 1.0;
+        //private bool IsZoomed => scaleTransform.ScaleX != 1.0;
 
         public void Draw(IEnumerable<FlameBox> boxes)
         {
             Clear();
 
-            DrawingVisual visual = new DrawingVisual { Transform = transformGroup }; // we have only one visual to provide best possible perf
+            DrawingVisual visual = new DrawingVisual { Transform = _transform }; // we have only one visual to provide best possible perf
 
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
@@ -79,7 +50,7 @@ namespace PerfView.StackViewer
                         null,  // no Pen is crucial for performance
                         new Rect(box.X, box.Y, box.Width, box.Height));
 
-                    if (box.Width * scaleTransform.ScaleX > 50 && box.Height * scaleTransform.ScaleY >= 6) // we draw the text only if humans can see something
+                    if (box.Width * _transform.Matrix.M11 > 50 && box.Height * _transform.Matrix.M22 >= 6) // we draw the text only if humans can see something
                     {
                         if (forSize == null)
                         {
@@ -115,98 +86,26 @@ namespace PerfView.StackViewer
         /// </summary>
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            //if (!IsEmpty && e.LeftButton == MouseButtonState.Released)
-            //{
-            //    var position = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
-            //    var tooltipText = flameBoxesMap.Find(position);
-            //    if (tooltipText != null)
-            //    {
-            //        ShowTooltip(tooltipText);
-            //        CurrentFlameBoxChanged(this, tooltipText);
-            //        return;
-            //    }
-            //}
-            //else if (!IsEmpty && e.LeftButton == MouseButtonState.Pressed && IsZoomed)
-            //{
-            //    var newPosition = e.GetPosition(this);
-            //    var transform = _invertAxis.IsChecked.Value ? scaleTransform : scaleTransform.Inverse;
-            //    var relativeMousePosition = transform.Transform(Mouse.GetPosition(this));
-            //    var x = _panXAxis.IsChecked.Value ?  relativeMousePosition.X : scaleTransform.CenterX;
-            //    var y = _panYAxis.IsChecked.Value ? relativeMousePosition.Y : scaleTransform.CenterY;
-            //    MoveZoomingCenterPoint(x, y);
-            //}
+            if (!IsEmpty && e.LeftButton == MouseButtonState.Released)
+            {
+                Point position = _transform.Inverse.Transform(Mouse.GetPosition(this));
+                string tooltipText = flameBoxesMap.Find(position);
+                if (tooltipText != null)
+                {
+                    ShowTooltip(tooltipText);
+                    CurrentFlameBoxChanged(this, tooltipText);
+                    return;
+                }
+            }
 
+            PanAndZoomCanvas_MouseMove(sender, e);
             HideTooltip();
         }
 
         private void OnMouseLeave(object sender, MouseEventArgs e)
         {
             HideTooltip();
-            ResetCursor(); // leaving the control while still zooming and OnMouseLeftButtonUp won't fire
-        }
-
-        private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            //float modifier = e.Delta > 0 ? 1.1f : 0.9f;
-
-            //Point relativeMousePosition = scaleTransform.Inverse.Transform(Mouse.GetPosition(this));
-
-            //scaleTransform.ScaleX = Math.Max(1.0, scaleTransform.ScaleX * modifier);
-            //scaleTransform.ScaleY = Math.Max(1.0, scaleTransform.ScaleY * modifier);
-            //scaleTransform.CenterX = relativeMousePosition.X;
-            //scaleTransform.CenterY = relativeMousePosition.Y;
-
-            //_ = Keyboard.Focus(this); // make it possible to handle Arrow keys and move CenterX & Y scaling points
-        }
-
-        private Point _basePoint;
-
-        private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            //if (IsZoomed)
-            //{
-            //    cursor = Mouse.OverrideCursor;
-            //    Mouse.OverrideCursor = Cursors.Hand; // emulate drag&drop cursor style
-            //    _basePoint = e.GetPosition(this);
-            //}
-        }
-
-        private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (IsZoomed)
-            {
-                ResetCursor();
-            }
-        }
-
-        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            //if (!IsZoomed)
-            //{
-            //    return;
-            //}
-
-            //switch (e.Key)
-            //{
-            //    case Key.Left:
-            //        MoveZoomingCenterPoint(scaleTransform.CenterX * 0.9, scaleTransform.CenterY);
-            //        e.Handled = true;
-            //        break;
-            //    case Key.Right:
-            //        MoveZoomingCenterPoint(scaleTransform.CenterX * 1.1, scaleTransform.CenterY);
-            //        e.Handled = true;
-            //        break;
-            //    case Key.Up:
-            //        MoveZoomingCenterPoint(scaleTransform.CenterX, scaleTransform.CenterY * 0.9);
-            //        e.Handled = true;
-            //        break;
-            //    case Key.Down:
-            //        MoveZoomingCenterPoint(scaleTransform.CenterX, scaleTransform.CenterY * 1.1);
-            //        e.Handled = true;
-            //        break;
-            //    default:
-            //        break;
-            //}
+            Cursor = Cursors.Arrow;
         }
 
         private void ShowTooltip(string text)
@@ -253,20 +152,6 @@ namespace PerfView.StackViewer
             RemoveLogicalChild(visual);
         }
 
-        private void MoveZoomingCenterPoint(double x, double y)
-        {
-            if (IsZoomed)
-            {
-                scaleTransform.CenterX = Math.Min(x, ActualWidth);
-                scaleTransform.CenterY = Math.Min(y, ActualHeight);
-            }
-        }
-
-        private void ResetCursor()
-        {
-            Mouse.OverrideCursor = cursor;
-        }
-
         private static Brush[][] GenerateBrushes(Random random)
         {
             Brush[][] brushes = new Brush[][]
@@ -296,14 +181,6 @@ namespace PerfView.StackViewer
             }
 
             return brushes;
-        }
-
-        private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
-        {
-            checkBox.Content = text;
-            checkBox.IsChecked = true;
-            checkBox.Margin = new Thickness(2);
-            _ = stackPanel.Children.Add(checkBox);
         }
 
         private class FlameBoxesMap
