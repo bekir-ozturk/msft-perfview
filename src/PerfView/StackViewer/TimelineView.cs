@@ -12,6 +12,19 @@ namespace PerfView
 
         private readonly TimelineVisuals _visuals = new TimelineVisuals();
 
+        /// <summary>
+        /// What is the first frame that is being drawn on our canvas?
+        /// The last frame will depend on the width of the canvas, which may be resized by user.
+        /// The first frame will always be fixed, unless user drags or uses the scroll bar.
+        /// </summary>
+        private int _startingFrameIndex = 0;
+
+        /// <summary>
+        /// Pixels per frame: how many pixels do we need to draw a single frame.
+        /// This value will provide zooming in and out functinality.
+        /// </summary>
+        private double _pixelsPerFrame = 1d;
+
         public bool IsInitialized { get; private set; } = false;
 
         public TimelineView()
