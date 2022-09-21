@@ -974,7 +974,7 @@ namespace PerfView
                     }
                 }
             }
-            else if(m_fileName.EndsWith(".speedscope.json", StringComparison.OrdinalIgnoreCase))
+            else if (m_fileName.EndsWith(".speedscope.json", StringComparison.OrdinalIgnoreCase))
             {
                 SpeedScopeStackSourceWriter.WriteStackViewAsJson(CallTree.StackSource, m_fileName);
             }
@@ -2320,7 +2320,7 @@ namespace PerfView
                 {
                     System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
                 }
-                catch(NotSupportedException ex)
+                catch (NotSupportedException ex)
                 {
                     StatusBar.Log($"Failed to set security protocol to TLS1.2: {ex}");
                     throw;
@@ -3654,6 +3654,16 @@ namespace PerfView
                 if (limit != 0)
                 {
                     EndTextBox.Text = (newSource.SampleTimeRelativeMSecLimit).ToString("n3");
+                    LowerSlider.Minimum = 0;
+                    LowerSlider.Value = 0;
+                    UpperSlider.Minimum = 0;
+
+                    if (double.TryParse(EndTextBox.Text, out var maxLimit))
+                    {
+                        LowerSlider.Maximum = maxLimit;
+                        UpperSlider.Maximum = maxLimit;
+                        UpperSlider.Value = maxLimit;
+                    }
                 }
             }
             else if (!double.TryParse(EndTextBox.Text, out end))
@@ -4238,6 +4248,46 @@ namespace PerfView
                 --GuiApp.MainWindow.NumWindowsNeedingSaving;
             }
         }
+        
+        private bool needsUpdate;
+
+        private void LowerSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            UpperSlider.Value = Math.Max(UpperSlider.Value, LowerSlider.Value);
+            UpdateStartEnd();
+        }
+
+        private void UpperSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            LowerSlider.Value = Math.Min(UpperSlider.Value, LowerSlider.Value);
+            UpdateStartEnd();
+        }
+        private void UpdateStartEnd()
+        {
+            if (StartTextBox == null || EndTextBox == null)
+                return;
+
+            var startText = (LowerSlider.Value).ToString("n3");
+            var endText = (UpperSlider.Value).ToString("n3");
+            if (startText != StartTextBox.Text)
+            {
+                StartTextBox.Text = startText;
+                needsUpdate = true;
+            }
+            if (endText != EndTextBox.Text)
+            {
+                EndTextBox.Text = endText;
+                needsUpdate = true;
+            }
+        }
+
+        private void Slider_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
+        {
+            if (needsUpdate)
+                Update();
+
+            needsUpdate = false;
+        }
 
         private StackSource m_stackSource;
         internal CallTree m_callTree;
@@ -4264,6 +4314,9 @@ namespace PerfView
         // List of presets loaded from configuration (and then maybe adjusted later)
         private List<Preset> m_presets;
 
+
         #endregion
+
+
     }
 }

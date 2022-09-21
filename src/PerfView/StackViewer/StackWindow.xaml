@@ -66,6 +66,29 @@
                 </TextBlock>
             </StackPanel>
         </DataTemplate>
+        <ControlTemplate x:Key="rangeSlider" TargetType="{x:Type Slider}">
+            <Border SnapsToDevicePixels="True" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Rectangle x:Name="PART_SelectionRange"/>
+                    <Track x:Name="PART_Track" Grid.Row="1">
+                        <Track.Thumb>
+                            <Thumb x:Name="Thumb">
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Rectangle Fill="Gray" Stroke="Black" StrokeThickness="1" Width="10" Height="18" SnapsToDevicePixels="True"/>
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Track.Thumb>
+                    </Track>
+                </Grid>
+            </Border>
+        </ControlTemplate>
         <Style x:Key="HeaderStyle">
             <Setter Property="TextBlock.FontSize" Value="14" />
             <Setter Property="TextBlock.FontWeight" Value="Bold" />
@@ -114,14 +137,14 @@
 
             <CommandBinding Command="{x:Static src:StackWindow.SetTimeRangeCommand}" Executed="DoSetTimeRange"/>
             <CommandBinding Command="{x:Static src:StackWindow.CopyTimeRangeCommand}" Executed="DoCopyTimeRange" />
-            
+
             <CommandBinding Command="{x:Static src:StackWindow.SetScenarioListCommand}" Executed="DoSetScenarioList" CanExecute="CanSetScenarioList" />
             <CommandBinding Command="{x:Static src:StackWindow.CopyScenarioListCommand}" Executed="DoCopyScenarioList" CanExecute="CanDoScenario" />
             <CommandBinding Command="{x:Static src:StackWindow.CopyScenarioListNamesCommand}" Executed="DoCopyScenarioListNames" CanExecute="CanDoScenario" />
             <CommandBinding Command="{x:Static src:StackWindow.SortScenariosByDefaultCommand}" Executed="DoSortScenariosByDefault" CanExecute="CanDoScenario" />
             <CommandBinding Command="{x:Static src:StackWindow.SortScenariosByRootNodeCommand}" Executed="DoSortScenariosByRootNode" CanExecute="CanDoScenario" />
             <CommandBinding Command="{x:Static src:StackWindow.SortScenariosByThisNodeCommand}" Executed="DoSortScenariosByThisNode" CanExecute="CanSortScenariosByNode" />
-            
+
             <CommandBinding Command="{x:Static src:StackWindow.IncludeItemCommand}" Executed="DoIncludeItem" />
             <CommandBinding Command="{x:Static src:StackWindow.ExcludeItemCommand}" Executed="DoExcludeItem" />
 
@@ -314,6 +337,11 @@
                         <TextBlock>Exclude any samples that happened before this time (MSec from start).</TextBlock>
                     </controls:HistoryComboBox.ToolTip>
                 </controls:HistoryComboBox>
+                <Grid VerticalAlignment="Top"  Margin="10,0,1,0" Width="100">
+                    <Border BorderThickness="0,1,0,0" BorderBrush="Black" VerticalAlignment="Center" Height="1" Margin="5,0,5,0"/>
+                    <Slider x:Name="LowerSlider" ValueChanged="LowerSlider_ValueChanged" Thumb.DragCompleted="Slider_DragCompleted" Template="{StaticResource rangeSlider}" Margin="0,0,10,0" />
+                    <Slider x:Name="UpperSlider" ValueChanged="UpperSlider_ValueChanged"  Thumb.DragCompleted="Slider_DragCompleted" Template="{StaticResource rangeSlider}" Margin="10,0,0,0" />
+                </Grid>
                 <TextBlock VerticalAlignment="Center" Margin="10,0,1,0">
                     <Hyperlink Command="Help" CommandParameter="EndTextBox" KeyboardNavigation.IsTabStop="False">End:</Hyperlink>
                 </TextBlock>
@@ -570,7 +598,7 @@
                         <EventTrigger.Actions>
                             <BeginStoryboard>
                                 <Storyboard TargetProperty="Opacity">
-                                    <DoubleAnimation From=".5" To="0" Duration="0:0:1" BeginTime="0:0:5"/> 
+                                    <DoubleAnimation From=".5" To="0" Duration="0:0:1" BeginTime="0:0:5"/>
                                 </Storyboard>
                             </BeginStoryboard>
                         </EventTrigger.Actions>
