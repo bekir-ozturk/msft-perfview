@@ -21,6 +21,7 @@ namespace PerfView.StackViewer
         protected readonly List<Visual> visuals = new List<Visual>();
         private Point _initialMousePosition;
         private bool _isDragging;
+        private bool _isZooming;
 
         public PanAndZoomCanvas()
         {
@@ -39,6 +40,7 @@ namespace PerfView.StackViewer
             _ = Children.Add(_controls);
 
             KeyDown += PanAndZoomCanvas_KeyDown;
+            KeyUp += PanAndZoomCanvas_KeyUp;
             MouseDown += PanAndZoomCanvas_MouseDown;
             MouseMove += PanAndZoomCanvas_MouseMove;
             MouseUp += PanAndZoomCanvas_MouseUp;
@@ -71,11 +73,19 @@ namespace PerfView.StackViewer
             {
                 PanCanvas(new Vector(0, 10));
             }
+            if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)
+            {
+                _isZooming = true;
+            }
+        }
+
+        private void PanAndZoomCanvas_KeyUp(object sender, KeyEventArgs e)
+        {
+            _isZooming = false;
         }
 
         protected override Visual GetVisualChild(int index)
         {
-            //return index == 0 ? _panningGroupBox : index == 1 ? _zoomGroupBox : visuals[index - 2];
             return index == 0 ? _controls : visuals[index - 1];
         }
 
@@ -137,20 +147,27 @@ namespace PerfView.StackViewer
 
         private void PanAndZoomCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            float scaleFactor = _zoomfactor;
-            if (e.Delta < 0)
+            if (_isZooming)
             {
-                scaleFactor = 1f / scaleFactor;
+                float scaleFactor = _zoomfactor;
+                if (e.Delta < 0)
+                {
+                    scaleFactor = 1f / scaleFactor;
+                }
+
+                Point mousePostion = e.GetPosition(this);
+
+                Matrix scaleMatrix = _transform.Matrix;
+                float scaleX = _zoomXAxis.IsChecked.Value ? scaleFactor : 1f;
+                float scaleY = _zoomYAxis.IsChecked.Value ? scaleFactor : 1f;
+
+                scaleMatrix.ScaleAt(scaleX, scaleY, mousePostion.X, mousePostion.Y);
+                _transform.Matrix = scaleMatrix;
             }
-
-            Point mousePostion = e.GetPosition(this);
-
-            Matrix scaleMatrix = _transform.Matrix;
-            float scaleX = _zoomXAxis.IsChecked.Value ? scaleFactor : 1f;
-            float scaleY = _zoomYAxis.IsChecked.Value ? scaleFactor : 1f;
-
-            scaleMatrix.ScaleAt(scaleX, scaleY, mousePostion.X, mousePostion.Y);
-            _transform.Matrix = scaleMatrix;
+            else
+            {
+                PanCanvas(new Vector(0, e.Delta));
+            }
         }
     }
 }
