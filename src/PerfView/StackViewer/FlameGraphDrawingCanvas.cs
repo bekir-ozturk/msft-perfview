@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -49,14 +48,10 @@ namespace PerfView
         };
 
         private List<Color> greenShades = new List<Color>(){
-                Color.FromRgb(11, 102, 35),
-                Color.FromRgb(112, 130, 56),
-                Color.FromRgb(63, 112, 77),
-                Color.FromRgb(143, 151, 121),
-                Color.FromRgb(41, 171, 135),
-                Color.FromRgb(0, 117, 94),
-                Color.FromRgb(59, 122, 87),
-                Color.FromRgb(28, 53, 45)
+                Color.FromRgb(0,255,0),
+                Color.FromRgb(124,252,0),
+                Color.FromRgb(127,255,0),
+                Color.FromRgb(173,255,47)
             };
 
         public void Draw(IEnumerable<FlameBox> boxes)
@@ -68,15 +63,16 @@ namespace PerfView
 
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
+
+                DrawColorLegend(drawingContext);
                 System.Drawing.Font forSize = null;
 
                 foreach (var box in boxes)
                 {
-
                     SolidColorBrush brush;
                     if (box.Color == FlameColor.Default)
                     {
-                        var id = random.Next(8);
+                        var id = random.Next(3);
                         brush = new SolidColorBrush(greenShades[id]);
                     }
                     else {
@@ -116,6 +112,53 @@ namespace PerfView
 
                 flameBoxesMap.Sort();
             }
+        }
+
+        private void DrawColorLegend(DrawingContext drawingContext) {
+            var blockSize = 10;
+            var gap = blockSize;
+
+            var forSize = new System.Drawing.Font("Consolas", blockSize, System.Drawing.GraphicsUnit.Pixel);
+
+            foreach (var color in FlameBox.MappingToColor) {
+              var rgbColor = colorsMapping[color.Value];
+                drawingContext.DrawRectangle(
+                    new SolidColorBrush(rgbColor),
+                    null,
+                    new Rect(blockSize, gap, blockSize, blockSize));
+
+                var text = new FormattedText(
+                        color.Key,
+                        CultureInfo.InvariantCulture,
+                        FlowDirection.LeftToRight,
+                        Typeface,
+                        Math.Min(forSize.SizeInPoints, 20),
+                        Brushes.Black);
+
+                drawingContext.DrawText(text, new Point(3*blockSize, gap));
+
+                gap += (blockSize*2);
+            }
+
+            drawingContext.DrawRectangle(
+                new SolidColorBrush(greenShades[0]),
+                null,
+                new Rect(blockSize, gap, blockSize, blockSize));
+
+            var textModule = new FormattedText(
+                "Module",
+                 CultureInfo.InvariantCulture,
+                 FlowDirection.LeftToRight,
+                 Typeface,
+                 Math.Min(forSize.SizeInPoints, 20),
+                 Brushes.Black);
+
+            drawingContext.DrawText(textModule, new Point(3 * blockSize, gap));
+
+            drawingContext.DrawRectangle(
+                 null,
+                new Pen(new SolidColorBrush(Color.FromRgb(0, 0, 0)), 1),
+                new Rect(0, 0, 60, gap + (blockSize * 2)));
         }
 
         /// <summary>

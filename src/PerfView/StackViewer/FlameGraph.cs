@@ -21,7 +21,7 @@ namespace PerfView
             public string TooltipText;
             public FlameColor Color;
 
-            private static Dictionary<string, FlameColor> mappingToColor = new Dictionary<string, FlameColor> {
+            public static Dictionary<string, FlameColor> MappingToColor = new Dictionary<string, FlameColor> {
                 { "ROOT", FlameColor.Grey },
                 { "Process", FlameColor.Brown },
                 { "Thread", FlameColor.Blue },
@@ -39,7 +39,7 @@ namespace PerfView
 
 
                 Color = FlameColor.Default; 
-                foreach (var startWith in mappingToColor) {
+                foreach (var startWith in MappingToColor) {
                     if (node.DisplayName.StartsWith(startWith.Key))
                     {
                         Color = startWith.Value;
