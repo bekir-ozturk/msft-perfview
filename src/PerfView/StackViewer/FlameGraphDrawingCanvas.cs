@@ -17,7 +17,6 @@ namespace PerfView.StackViewer
         public event EventHandler<string> CurrentFlameBoxChanged;
         private readonly FlameBoxesMap flameBoxesMap = new FlameBoxesMap();
         private readonly ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
-        private readonly Cursor cursor;
 
         public FlameGraphDrawingCanvas()
         {
@@ -27,8 +26,6 @@ namespace PerfView.StackViewer
         }
 
         public bool IsEmpty => visuals.Count == 0;
-
-        //private bool IsZoomed => scaleTransform.ScaleX != 1.0;
 
         public void Draw(IEnumerable<FlameBox> boxes)
         {
