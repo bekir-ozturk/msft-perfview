@@ -81,15 +81,18 @@ namespace PerfView
                             Padding
                         );
 
-                        context.Text(
-                            workVisual.DisplayName,
-                            Typeface,
-                            FontSize,
-                            safeStartX + Padding,
-                            startY + Padding,
-                            workWidth - (2 * Padding),
-                            RowHeight
-                        );
+                        if (workVisual.DisplayName != null)
+                        {
+                            context.Text(
+                                workVisual.DisplayName,
+                                Typeface,
+                                FontSize,
+                                safeStartX + Padding,
+                                startY + Padding,
+                                workWidth - (2 * Padding),
+                                RowHeight
+                            );
+                        }
                     }
                 }
             }

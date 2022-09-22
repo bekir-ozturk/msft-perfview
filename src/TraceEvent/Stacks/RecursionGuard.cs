@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
     /// We do ultimately do a stack-overflow to prevent infinite recursion, but it is now under our
     /// control and much larger than you may get on any one thread stack.  
     /// </summary>
-    internal struct RecursionGuard
+    public struct RecursionGuard
     {
         private readonly ushort _currentThreadRecursionDepth;
         private readonly ushort _resetCount;
