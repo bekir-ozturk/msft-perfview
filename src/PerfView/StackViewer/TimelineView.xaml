@@ -16,12 +16,6 @@
                 Background="White"
                 />
             <ScrollBar DockPanel.Dock="Bottom" Orientation="Horizontal" Minimum="0" Maximum="20000" ViewportSize="5000"/>
-            <DockPanel DockPanel.Dock="Bottom" LastChildFill="False">
-                <Label>Start Time:</Label>
-                <TextBox Text="00:00:000" Width="100" VerticalAlignment="Center"/>
-                <Label Margin="10,0,0,0">End Time:</Label>
-                <TextBox Text="00:09:275" Width="100" VerticalAlignment="Center"/>
-            </DockPanel>
             <src:TimelineFocusCanvas x:Name="FocusCanvas" Background="White"/>
         </DockPanel>
         <Label Name="InfoLabel" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" >Failed to load</Label>

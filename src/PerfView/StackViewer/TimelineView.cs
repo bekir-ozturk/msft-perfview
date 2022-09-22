@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.Tracing.Stacks;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Controls;
@@ -60,6 +61,9 @@ namespace PerfView
 
             SummaryCanvas.SizeChanged += (s, e) => { UpdateSummaryCanvas(_visuals); };
             FocusCanvas.SizeChanged += (s, e) => { UpdateFocusCanvas(_visuals); };
+            FocusCanvas.Reset += (s, e) => { OnFocusCanvasReset(e); };
+            FocusCanvas.Pan += (s, e) => { OnFocusCanvasPan(e.TimeDelta); };
+            FocusCanvas.Zoom += (s, e) => { OnFocusCanvasZoom(e.TimeOffset, e.Scale); };
         }
 
         public async Task InitializeAsync(CallTree callTree)
@@ -104,6 +108,36 @@ namespace PerfView
             }
 
             FocusCanvas.Update(visuals);
+        }
+
+        private void OnFocusCanvasReset(EventArgs e)
+        {
+            // TODO: Proper reset.
+            _visuals.StartingFrame = 200;
+            _visuals.EndingFrame = 2000;
+
+            FocusCanvas.Update(_visuals);
+        }
+
+        private void OnFocusCanvasPan(float timeDelta)
+        {
+            _visuals.StartingFrame -= timeDelta;
+            _visuals.EndingFrame -= timeDelta;
+
+            // TODO: Update the model here.
+
+            FocusCanvas.Update(_visuals);
+        }
+
+        private void OnFocusCanvasZoom(float timeOffset, float scale)
+        {
+            float scaleCenter = _visuals.StartingFrame + timeOffset;
+            _visuals.StartingFrame = scaleCenter - ((scaleCenter - _visuals.StartingFrame) / scale);
+            _visuals.EndingFrame = scaleCenter + ((_visuals.EndingFrame - scaleCenter) / scale);
+
+            // TODO: Update the model here.
+
+            FocusCanvas.Update(_visuals);
         }
     }
 }

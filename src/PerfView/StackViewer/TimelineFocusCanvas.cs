@@ -1,16 +1,31 @@
-﻿using PerfView.StackViewer;
 using System;
 using System.Linq;
-using System.Windows.Controls;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using Pen = System.Windows.Media.Pen;
+using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
 namespace PerfView
 {
     internal class TimelineFocusCanvas : PanAndZoomCanvas
     {
+        public class PanEventArgs : EventArgs
+        {
+            public float TimeDelta { get; set; }
+        }
+
+        public class ZoomEventArgs : EventArgs
+        {
+            public float TimeOffset { get; set; }
+            public float Scale { get; set; }
+        }
+
+        public event EventHandler<EventArgs> Reset;
+        public event EventHandler<PanEventArgs> Pan;
+        public event EventHandler<ZoomEventArgs> Zoom;
+
         public TimelineFocusCanvas()
             : base()
         {
@@ -40,7 +55,7 @@ namespace PerfView
             float startingFrame = visuals.StartingFrame;
             float endingFrame = visuals.EndingFrame;
             float range = endingFrame - startingFrame;
-            float scale = width / range;
+            m_PixelsPerUnit = width / range;
 
             DrawingVisual visual = new DrawingVisual();
 
@@ -74,9 +89,9 @@ namespace PerfView
                             new SolidColorBrush(workVisual.DisplayColor.Scale(0.8)),
                             1.0
                         );
-                        float startX = (workVisual.StartingFrame - startingFrame) * scale;
+                        float startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
                         float safeStartX = MathExtensions.Clamp(startX, 0.0f, width);
-                        float endX = (workVisual.EndingFrame - startingFrame) * scale;
+                        float endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
                         float safeEndX = MathExtensions.Clamp(endX, 0.0f, width);
                         float workWidth = safeEndX - safeStartX;
 
@@ -122,6 +137,29 @@ namespace PerfView
             Visuals.Replace(visual, 0);
         }
 
+        protected override Point GetTransformedPosition(Point point)
+        {
+            return point;
+        }
+
+        protected override void OnPan(Vector delta)
+        {
+            float timeDelta = (float)delta.X / m_PixelsPerUnit;
+            Pan.Invoke(this, new PanEventArgs { TimeDelta = timeDelta });
+        }
+
+        protected override void OnReset()
+        {
+            Reset.Invoke(this, new EventArgs());
+        }
+
+        protected override void OnZoom(Point center, Vector delta)
+        {
+            float timeOffset = (float)center.X / m_PixelsPerUnit;
+            float scale = (float)delta.X;
+            Zoom.Invoke(this, new ZoomEventArgs { TimeOffset = timeOffset, Scale = scale });
+        }
+
         private float GetTextWidth(string text)
         {
             var textBlock = new TextBlock { Text = text };
@@ -131,5 +169,7 @@ namespace PerfView
         }
 
         private static readonly Typeface Typeface = new Typeface("Consolas");
+
+        private float m_PixelsPerUnit = 1.0f;
     }
 }

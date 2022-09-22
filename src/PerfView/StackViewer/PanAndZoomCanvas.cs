@@ -1,72 +1,114 @@
-﻿using System.Linq;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Input;
+using GroupBox = System.Windows.Controls.GroupBox;
+using CheckBox = System.Windows.Controls.CheckBox;
 
-namespace PerfView.StackViewer
+namespace PerfView
 {
-    public class PanAndZoomCanvas : Canvas
+    public abstract class PanAndZoomCanvas : Canvas
     {
-        private const float _zoomfactor = 1.1f;
-        protected readonly MatrixTransform _transform = new MatrixTransform();
-        private readonly StackPanel _controls = new StackPanel();
-        private readonly GroupBox _panningGroupBox = new GroupBox();
-        private readonly CheckBox _panXAxis = new CheckBox();
-        private readonly CheckBox _panYAxis = new CheckBox();
-        private readonly GroupBox _zoomGroupBox = new GroupBox();
-        private readonly CheckBox _zoomXAxis = new CheckBox();
-        private readonly CheckBox _zoomYAxis = new CheckBox();
-        private Point _initialMousePosition;
-        private bool _isDragging;
-        private bool _isZooming;
-
         public VisualCollectionHost Visuals
         {
             get { return m_VisualsHost; }
         }
 
+        public bool IsPanningX
+        {
+            get { return m_PanXAxis.IsChecked.Value; }
+        }
+
+        public bool IsPanningY
+        {
+            get { return m_PanYAxis.IsChecked.Value; }
+        }
+
+        public bool IsZoomingX
+        {
+            get { return m_ZoomXAxis.IsChecked.Value; }
+        }
+
+        public bool IsZoomingY
+        {
+            get { return m_ZoomYAxis.IsChecked.Value; }
+        }
+
         public PanAndZoomCanvas()
         {
+            Focusable = true;
+
+            KeyDown += OnKeyDown;
+            KeyUp += OnKeyUp;
+            MouseDown += OnMouseDown;
+            MouseMove += OnMouseMove;
+            MouseUp += OnMouseUp;
+            MouseLeave += OnMouseLeave;
+            MouseWheel += OnMouseWheel;
+
+
             m_VisualsHost = new VisualCollectionHost(this);
             Children.Add(m_VisualsHost);
 
-            _panningGroupBox.Header = "Panning";
+            m_PanningGroupBox.Header = "Panning";
             StackPanel panStackPanel = new StackPanel();
-            AddCheckBox(_panXAxis, "X-Axis", panStackPanel);
-            AddCheckBox(_panYAxis, "Y-Axis", panStackPanel);
-            _panningGroupBox.Content = panStackPanel;
-            _zoomGroupBox.Header = "Zoom";
+            AddCheckBox(m_PanXAxis, "X-Axis", panStackPanel);
+            AddCheckBox(m_PanYAxis, "Y-Axis", panStackPanel);
+            m_PanningGroupBox.Content = panStackPanel;
+            m_ZoomGroupBox.Header = "Zoom";
             StackPanel zoomStackPanel = new StackPanel();
-            AddCheckBox(_zoomXAxis, "X-Axis", zoomStackPanel);
-            AddCheckBox(_zoomYAxis, "Y-Axis", zoomStackPanel);
-            _zoomGroupBox.Content = zoomStackPanel;
-            _ = _controls.Children.Add(_panningGroupBox);
-            _ = _controls.Children.Add(_zoomGroupBox);
-            _ = Children.Add(_controls);
+            AddCheckBox(m_ZoomXAxis, "X-Axis", zoomStackPanel);
+            AddCheckBox(m_ZoomYAxis, "Y-Axis", zoomStackPanel);
+            m_ZoomGroupBox.Content = zoomStackPanel;
 
-            KeyDown += PanAndZoomCanvas_KeyDown;
-            KeyUp += PanAndZoomCanvas_KeyUp;
-            MouseDown += PanAndZoomCanvas_MouseDown;
-            MouseMove += PanAndZoomCanvas_MouseMove;
-            MouseUp += PanAndZoomCanvas_MouseUp;
-            MouseWheel += PanAndZoomCanvas_MouseWheel;
+            var controlsPanel = new StackPanel();
+            controlsPanel.Children.Add(m_PanningGroupBox);
+            controlsPanel.Children.Add(m_ZoomGroupBox);
+
+            const float Padding = 5;
+            m_Controls.Margin = new Thickness(Padding);
+            m_Controls.Padding = new Thickness(Padding);
+            m_Controls.Background = Brushes.White;
+            m_Controls.BorderBrush = Brushes.LightGray;
+            m_Controls.CornerRadius = new CornerRadius(Padding);
+            m_Controls.BorderThickness = new Thickness(1);
+            m_Controls.Child = controlsPanel;
+            Children.Add(m_Controls);
         }
-
-        public bool IsZoomed => _transform.Matrix.M11 != 1.0 || _transform.Matrix.M22 != 1.0;
 
         protected override int VisualChildrenCount => Visuals.Items.Count + 1;
 
         protected override Visual GetVisualChild(int index)
         {
-            return index == VisualChildrenCount - 1 ? _controls : Visuals.Items[index];
+            return index == VisualChildrenCount - 1 ? m_Controls : Visuals.Items[index];
         }
 
-        private void PanAndZoomCanvas_KeyDown(object sender, KeyEventArgs e)
+        protected abstract Point GetTransformedPosition(Point point);
+        protected abstract void OnReset();
+        protected abstract void OnPan(Vector delta);
+        protected abstract void OnZoom(Point center, Vector scale);
+
+        private readonly VisualCollectionHost m_VisualsHost;
+
+        private readonly Border m_Controls = new Border();
+        private readonly GroupBox m_PanningGroupBox = new GroupBox();
+        private readonly CheckBox m_PanXAxis = new CheckBox();
+        private readonly CheckBox m_PanYAxis = new CheckBox();
+        private readonly GroupBox m_ZoomGroupBox = new GroupBox();
+        private readonly CheckBox m_ZoomXAxis = new CheckBox();
+        private readonly CheckBox m_ZoomYAxis = new CheckBox();
+
+        private bool m_IsCtrlDown;
+        private bool m_IsZooming;
+        private bool m_IsDragging;
+        private Point m_InitialMousePosition;
+        private Point m_LastMousePosition;
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Escape)
             {
-                _transform.Matrix = new TranslateTransform(0, 0).Value;
+                OnReset();
             }
             else if (e.Key == Key.Left)
             {
@@ -86,13 +128,8 @@ namespace PerfView.StackViewer
             }
             if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)
             {
-                _isZooming = true;
+                m_IsCtrlDown = true;
             }
-        }
-
-        private void PanAndZoomCanvas_KeyUp(object sender, KeyEventArgs e)
-        {
-            _isZooming = false;
         }
 
         private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
@@ -103,79 +140,116 @@ namespace PerfView.StackViewer
             _ = stackPanel.Children.Add(checkBox);
         }
 
-        private void PanAndZoomCanvas_MouseDown(object sender, MouseButtonEventArgs e)
+        private void OnKeyUp(object sender, KeyEventArgs e)
+        {
+            m_IsCtrlDown = false;
+        }
+
+        private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
             {
-                _initialMousePosition = _transform.Inverse.Transform(e.GetPosition(this));
+                m_InitialMousePosition = e.GetPosition(this);
+                m_LastMousePosition = m_InitialMousePosition;
+
                 Cursor = Cursors.Hand;
-                _isDragging = true;
+
+                if (m_IsCtrlDown)
+                {
+                    m_IsZooming = true;
+                }
+                else
+                {
+                    m_IsDragging = true;
+                }
             }
         }
 
-        protected void PanAndZoomCanvas_MouseMove(object sender, MouseEventArgs e)
+        private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed && _isDragging)
+            if (e.LeftButton == MouseButtonState.Pressed && (m_IsDragging || m_IsZooming))
             {
-                Point mousePosition = _transform.Inverse.Transform(e.GetPosition(this));
-                Vector delta = Point.Subtract(mousePosition, _initialMousePosition);
-                PanCanvas(delta);
+                Point lastPosition = GetTransformedPosition(m_LastMousePosition);
+                Point currentPosition = GetTransformedPosition(e.GetPosition(this));
+                if (m_IsDragging)
+                {
+                    PanCanvas(currentPosition - lastPosition);
+                }
+                if (m_IsZooming)
+                {
+                    Vector delta = (currentPosition - lastPosition);
+
+                    int zoomDelta = (int)delta.Length;
+                    if (delta.X < 0)
+                    {
+                        zoomDelta *= -1;
+                    }
+                    ZoomCanvas(m_InitialMousePosition, zoomDelta);
+                }
+
+                m_LastMousePosition = e.GetPosition(this);
             }
         }
 
-        protected void PanAndZoomCanvas_MouseUp(object sender, MouseButtonEventArgs e)
+        private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
-            _isDragging = false;
-            _initialMousePosition = default;
+            m_IsDragging = false;
+            m_IsZooming = false;
+            m_InitialMousePosition = default;
             Cursor = Cursors.Arrow;
         }
 
-        private readonly VisualCollectionHost m_VisualsHost;
+        private void OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            m_IsDragging = false;
+            m_IsZooming = false;
+            m_InitialMousePosition = default;
+            Cursor = Cursors.Arrow;
+        }
+
+        private void OnMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (m_IsCtrlDown)
+            {
+                ZoomCanvas(e.GetPosition(this), e.Delta);
+            }
+            else
+            {
+                PanCanvas(IsPanningY ? new Vector(0, e.Delta) : new Vector(e.Delta, 0));
+            }
+        }
 
         private void PanCanvas(Vector delta)
         {
-            if (!_panXAxis.IsChecked.Value)
+            if (!IsPanningX)
             {
                 delta.X = 0;
             }
 
-            if (!_panYAxis.IsChecked.Value)
+            if (!IsPanningY)
             {
                 delta.Y = 0;
             }
 
-            TranslateTransform translate = new TranslateTransform(delta.X, delta.Y);
-            _transform.Matrix = translate.Value * _transform.Matrix;
-
-            foreach (DrawingVisual child in Visuals.Items.Cast<DrawingVisual>())
+            if (delta.X == 0 && delta.Y == 0)
             {
-                child.Transform = _transform;
+                return;
             }
+
+            OnPan(delta);
         }
 
-        private void PanAndZoomCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+        private void ZoomCanvas(Point center, int delta)
         {
-            if (_isZooming)
+            if (delta == 0.0f)
             {
-                float scaleFactor = _zoomfactor;
-                if (e.Delta < 0)
-                {
-                    scaleFactor = 1f / scaleFactor;
-                }
-
-                Point mousePostion = e.GetPosition(this);
-
-                Matrix scaleMatrix = _transform.Matrix;
-                float scaleX = _zoomXAxis.IsChecked.Value ? scaleFactor : 1f;
-                float scaleY = _zoomYAxis.IsChecked.Value ? scaleFactor : 1f;
-
-                scaleMatrix.ScaleAt(scaleX, scaleY, mousePostion.X, mousePostion.Y);
-                _transform.Matrix = scaleMatrix;
+                return;
             }
-            else
-            {
-                PanCanvas(new Vector(0, e.Delta));
-            }
+
+            float scaleFactor = 1.0f + (0.001f * delta);
+            var scale = new Vector(IsZoomingX ? scaleFactor : 1.0f, IsZoomingY ? scaleFactor : 1.0f);
+
+            OnZoom(center, scale);
         }
     }
 }
