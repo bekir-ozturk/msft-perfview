@@ -70,10 +70,10 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
 
                 // By default sort by inclusive Metric
                 SortInclusiveMetricDecending();
-                m_TreeForStack = null;
+                /*m_TreeForStack = null;
                 m_frameIntern = null;
                 m_canonicalID = null;
-                m_calleeLookups = null;
+                m_calleeLookups = null;*/
             }
         }
 
@@ -293,7 +293,7 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
             public CallTreeNode Tree;
         }
 
-        private CallTreeNode FindTreeNode(StackSourceCallStackIndex stack, RecursionGuard recursionGuard = default(RecursionGuard))
+        public CallTreeNode FindTreeNode(StackSourceCallStackIndex stack, RecursionGuard recursionGuard = default(RecursionGuard))
         {
             if (recursionGuard.RequiresNewThread)
             {

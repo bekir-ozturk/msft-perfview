@@ -6,7 +6,7 @@ using Pen = System.Windows.Media.Pen;
 
 namespace PerfView
 {
-    internal class TimelineFocusCanvas : PanAndZoomCanvas
+    internal class TimelineFocusCanvas : RenderPanAndZoomCanvas
     {
         public TimelineFocusCanvas()
             : base()
@@ -81,15 +81,18 @@ namespace PerfView
                             Padding
                         );
 
-                        context.Text(
-                            workVisual.DisplayName,
-                            Typeface,
-                            FontSize,
-                            safeStartX + Padding,
-                            startY + Padding,
-                            workWidth - (2 * Padding),
-                            RowHeight
-                        );
+                        if (workVisual.DisplayName != null)
+                        {
+                            context.Text(
+                                workVisual.DisplayName,
+                                Typeface,
+                                FontSize,
+                                safeStartX + Padding,
+                                startY + Padding,
+                                workWidth - (2 * Padding),
+                                RowHeight
+                            );
+                        }
                     }
                 }
             }
@@ -100,6 +103,5 @@ namespace PerfView
         private static readonly Typeface Typeface = new Typeface("Consolas");
 
         private readonly VisualCollectionHost m_VisualsHost;
-
     }
 }

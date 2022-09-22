@@ -91,9 +91,9 @@ namespace PerfView
         {
             public readonly VisualCollection Visuals;
 
-            public VisualHost(Visual Parent)
+            public VisualHost(Visual Parent) 
             {
-                Visuals = new VisualCollection(this);
+               Visuals = new VisualCollection(this);
             }
 
             protected override int VisualChildrenCount
@@ -151,7 +151,7 @@ namespace PerfView
             {
                 m_VisualHost.Visuals.RemoveAt(0);
                 m_VisualHost.Visuals.Insert(0, visual);
-            }
+            }            
 
             _startLine.Y2 = ActualHeight;
             _endLine.Y2 = ActualHeight;
