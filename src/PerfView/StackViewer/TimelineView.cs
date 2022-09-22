@@ -2,6 +2,7 @@
 using PerfView.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -12,6 +13,8 @@ namespace PerfView
     {
         private static readonly Random _random = new Random();
         private readonly Dictionary<StackSourceCallStackIndex, StackInfo> _stackInfoCache = new Dictionary<StackSourceCallStackIndex, StackInfo>();
+        private Dictionary<int, List<(StackSourceSample sample, StackInfo info)>> stacksPerThread = null;
+
         private CallTree _callTree = null;
 
         private readonly TimelineVisuals _visuals = new TimelineVisuals
@@ -43,52 +46,56 @@ namespace PerfView
 
         private void RepopulateVisualsData(CallTree callTree, TimelineVisuals visuals)
         {
-            Dictionary<int, List<(StackSourceSample sample, StackInfo info)>> stacksPerThread = new Dictionary<int, List<(StackSourceSample, StackInfo)>>();
-
-            callTree.StackSource.ForEach((s) =>
+            if (stacksPerThread == null)
             {
-                var treeNode = callTree.FindTreeNode(s.StackIndex);
-                var threadNode = treeNode;
-                while (threadNode != null && !threadNode.Name.StartsWith("Thread ("))
+                // This data was never calculated. Calculate once and then reuse.
+                stacksPerThread = new Dictionary<int, List<(StackSourceSample, StackInfo)>>();
+                callTree.StackSource.ForEach((s) =>
                 {
-                    threadNode = threadNode.Caller;
-                }
-
-                StackInfo sInfo;
-                if (!_stackInfoCache.TryGetValue(s.StackIndex, out sInfo))
-                {
-                    int stackDepth = callTree.StackSource.StackDepth(s.StackIndex);
-                    _stackInfoCache[s.StackIndex] = sInfo = new StackInfo()
+                    var treeNode = callTree.FindTreeNode(s.StackIndex);
+                    var threadNode = treeNode;
+                    while (threadNode != null && !threadNode.Name.StartsWith("Thread ("))
                     {
-                        Frames = new StackSourceFrameIndex[stackDepth],
-                        FrameNames = new string[stackDepth]
-                    };
+                        threadNode = threadNode.Caller;
+                    }
 
-                    StackSourceCallStackIndex stackIndex = s.StackIndex;
-                    for (int i = stackDepth - 1; i >= 0; i--)
+                    StackInfo sInfo;
+                    if (!_stackInfoCache.TryGetValue(s.StackIndex, out sInfo))
                     {
-                        sInfo.Frames[i] = callTree.StackSource.GetFrameIndex(stackIndex);
-                        string frameName = sInfo.FrameNames[i] = callTree.StackSource.GetFrameName(sInfo.Frames[i], true);
-
-                        if (frameName.StartsWith("Thread ("))
+                        int stackDepth = callTree.StackSource.StackDepth(s.StackIndex);
+                        _stackInfoCache[s.StackIndex] = sInfo = new StackInfo()
                         {
-                            sInfo.ThreadId = GetThreadIdFromFrameName(frameName);
+                            Frames = new StackSourceFrameIndex[stackDepth],
+                            FrameNames = new string[stackDepth]
+                        };
+
+                        StackSourceCallStackIndex stackIndex = s.StackIndex;
+                        for (int i = stackDepth - 1; i >= 0; i--)
+                        {
+                            sInfo.Frames[i] = callTree.StackSource.GetFrameIndex(stackIndex);
+                            string frameName = sInfo.FrameNames[i] = callTree.StackSource.GetFrameName(sInfo.Frames[i], true);
+
+                            if (frameName.StartsWith("Thread ("))
+                            {
+                                sInfo.ThreadId = GetThreadIdFromFrameName(frameName);
+                            }
+                            stackIndex = callTree.StackSource.GetCallerIndex(stackIndex);
                         }
-                        stackIndex = callTree.StackSource.GetCallerIndex(stackIndex);
                     }
-                }
 
-                if (sInfo.ThreadId != 0)
-                {
-                    List<(StackSourceSample, StackInfo)> stacks;
-                    if (!stacksPerThread.TryGetValue(sInfo.ThreadId, out stacks))
+                    if (sInfo.ThreadId != 0)
                     {
-                        stacksPerThread[sInfo.ThreadId] = stacks = new List<(StackSourceSample, StackInfo)>();
+                        List<(StackSourceSample, StackInfo)> stacks;
+                        if (!stacksPerThread.TryGetValue(sInfo.ThreadId, out stacks))
+                        {
+                            stacksPerThread[sInfo.ThreadId] = stacks = new List<(StackSourceSample, StackInfo)>();
+                        }
+                        stacks.Add((s, sInfo));
                     }
-                    stacks.Add((s, sInfo));
-                }
-            });
+                });
+            }
 
+            visuals.VisualsPerThreadId.Clear();
             foreach (var st in stacksPerThread)
             {
                 if (!visuals.VisualsPerThreadId.TryGetValue(st.Key, out List<WorkVisual> works))
@@ -102,13 +109,17 @@ namespace PerfView
                 int sampleAtTheEndOfInterest = st.Value.Skip(firstSampleOfInterest).TakeWhile(s => (int)s.sample.SampleIndex < visuals.EndingFrame).Count() + firstSampleOfInterest;
                 sampleAtTheEndOfInterest = Math.Min(st.Value.Count, sampleAtTheEndOfInterest + 1);
 
-                if (!FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 0, 40, 150, works))
+                const double minimumVisualSizeInPixels = 50;
+                const double maximumVisualSizeInPixels = 200;
+                int minimumVisualSampleCount = (int)(minimumVisualSizeInPixels / FocusCanvas.ActualWidth * (visuals.EndingFrame - visuals.StartingFrame));
+                int maximumVisualSampleCount = (int)(maximumVisualSizeInPixels / FocusCanvas.ActualWidth * (visuals.EndingFrame - visuals.StartingFrame));
+                if (!FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 1, minimumVisualSampleCount, maximumVisualSampleCount, works))
                 {
                     works.Add(new WorkVisual()
                     {
                         StartingFrame = (int)st.Value[firstSampleOfInterest].sample.SampleIndex,
                         EndingFrame = (int)(st.Value[sampleAtTheEndOfInterest - 1].sample.SampleIndex + 1),
-                        DisplayColor = GetRandomColor(),
+                        DisplayColor = GetRandomColor(0, (int)st.Value[firstSampleOfInterest].sample.SampleIndex, 0, true),
                         DisplayName = "Thread " + st.Key,
                         IsGroupingSmallWork = true
                     });
@@ -195,7 +206,7 @@ namespace PerfView
                             {
                                 StartingFrame = (int)samples[groupedWorkStart].sample.SampleIndex,
                                 EndingFrame = (int)currentSampleIndex,
-                                DisplayColor = Colors.DimGray,
+                                DisplayColor = GetRandomColor(666, (int)samples[groupedWorkStart].sample.SampleIndex, frameDepth, true),
                                 DisplayName = "Other",
                                 IsGroupingSmallWork = true,
                             });
@@ -222,7 +233,7 @@ namespace PerfView
                             {
                                 StartingFrame = (int)samples[groupedWorkStart].sample.SampleIndex,
                                 EndingFrame = (int)samples[lastWorkStart].sample.SampleIndex,
-                                DisplayColor = Colors.DimGray,
+                                DisplayColor = GetRandomColor(666, (int)samples[groupedWorkStart].sample.SampleIndex, frameDepth, true),
                                 DisplayName = "Other",
                                 IsGroupingSmallWork = true,
                             });
@@ -247,7 +258,7 @@ namespace PerfView
                             {
                                 StartingFrame = (int)samples[lastWorkStart].sample.SampleIndex,
                                 EndingFrame = (int)currentSampleIndex,
-                                DisplayColor = GetRandomColor(),
+                                DisplayColor = GetRandomColor((int)(trackedFrame ?? 0), (int)samples[lastWorkStart].sample.SampleIndex, frameDepth, false),
                                 DisplayName = trackedFrameName,
                                 IsGroupingSmallWork = false,
                             });
@@ -345,9 +356,10 @@ namespace PerfView
             return threadId;
         }
 
-        private static Color GetRandomColor()
+        private static Color GetRandomColor(int frame, int startingFrameIndex, int frameDepth, bool group)
         {
-            return ColorUtilities.ColorFromHSV(270, 0.4, .7 + _random.NextDouble() / 3d);
+            int value = (777777 + frame * 13 + startingFrameIndex * 17) % 1000;
+            return ColorUtilities.ColorFromHSV(0.1 + frameDepth * 0.02, 0.1 + (value / 1000d) / 15d, group ? 0.8 : 0.85);
         }
 
         internal class StackInfo

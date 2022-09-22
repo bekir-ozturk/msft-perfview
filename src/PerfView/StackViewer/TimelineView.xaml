@@ -14,6 +14,7 @@
                 DockPanel.Dock="Top"
                 Height="90"
                 Background="White"
+                Visibility="Collapsed"
                 />
             <ScrollBar DockPanel.Dock="Bottom" Orientation="Horizontal" Minimum="0" Maximum="20000" ViewportSize="5000"/>
             <src:TimelineFocusCanvas x:Name="FocusCanvas" Background="White" ClipToBounds="True"/>

@@ -5,29 +5,53 @@ namespace PerfView.Utilities
 {
     internal class ColorUtilities
     {
-        public static Color ColorFromHSV(double hue, double saturation, double value)
+        public static Color ColorFromHSV(double h, double s, double v)
         {
-            int hi = Convert.ToInt32(Math.Floor(hue / 60)) % 6;
-            double f = hue / 60 - Math.Floor(hue / 60);
+            double r = 0;
+            double g = 0;
+            double b = 0;
 
-            value = value * 255;
-            byte v = (byte)value;
-            byte p = (byte)(value * (1 - saturation));
-            byte q = (byte)(value * (1 - f * saturation));
-            byte t = (byte)(value * (1 - (1 - f) * saturation));
+            int i = (int)Math.Floor(h * 6d);
+            double f = h * 6d - i;
+            double p = v * (1d - s);
+            double q = v * (1d - f * s);
+            double t = v * (1d - (1d - f) * s);
 
-            if (hi == 0)
-                return Color.FromRgb(v, t, p);
-            else if (hi == 1)
-                return Color.FromRgb(q, v, p);
-            else if (hi == 2)
-                return Color.FromRgb(p, v, t);
-            else if (hi == 3)
-                return Color.FromRgb(p, q, v);
-            else if (hi == 4)
-                return Color.FromRgb(t, p, v);
-            else
-                return Color.FromRgb(v, p, q);
+            switch (i % 6)
+            {
+                case 0:
+                    r = v;
+                    g = t;
+                    b = p;
+                    break;
+                case 1:
+                    r = q;
+                    g = v;
+                    b = p;
+                    break;
+                case 2:
+                    r = p;
+                    g = v;
+                    b = t;
+                    break;
+                case 3:
+                    r = p;
+                    g = q;
+                    b = v;
+                    break;
+                case 4:
+                    r = t;
+                    g = p;
+                    b = v;
+                    break;
+                case 5:
+                    r = v;
+                    g = p;
+                    b = q;
+                    break;
+            }
+
+            return Color.FromRgb((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
         }
     }
 }
