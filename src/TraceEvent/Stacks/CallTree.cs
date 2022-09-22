@@ -1140,21 +1140,15 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
             if (m_indentString == null || m_indentStringForPrimary != displayPrimaryOnly)
             {
                 var depth = Depth();
-                var chars = new char[depth];
+                var chars = new char[depth * 2];
                 var i = depth - 1;
-                if (0 <= i)
+                while (i >= 0)
                 {
-                    chars[i] = '+';
-                    var ancestor = Caller;
+                    chars[i * 2] = ' ';
+                    chars[i * 2 + 1] = ' ';
                     --i;
-                    while (i >= 0)
-                    {
-                        chars[i] = ancestor.IsLastChild(displayPrimaryOnly) ? ' ' : '|';
-                        ancestor = ancestor.Caller;
-                        --i;
-                    }
                 }
-
+ 
                 m_indentString = new string(chars);
                 m_indentStringForPrimary = displayPrimaryOnly;
             }

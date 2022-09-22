@@ -21,6 +21,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -31,6 +32,34 @@ using Path = System.IO.Path;
 
 namespace PerfView
 {
+    [ValueConversion(typeof(bool), typeof(Visibility))]
+    public sealed class BooleanToCollapsedConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (!(value is bool))
+            {
+                return null;
+            }
+
+            return (bool) value ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType,
+            object parameter, CultureInfo culture)
+        {
+            if (Equals(value, Visibility.Collapsed))
+            {
+                return true;
+            }
+            if (Equals(value, Visibility.Visible))
+            {
+                return false;
+            }
+            return null;
+        }
+    }
+
     /// <summary>
     /// Interaction logic for StackWindow.xaml
     /// </summary>
