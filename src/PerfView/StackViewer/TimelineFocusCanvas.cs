@@ -82,11 +82,9 @@ namespace PerfView
                             1.0
                         );
                         float startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
-                        float safeStartX = MathExtensions.Clamp(startX, 0.0f, width);
                         float startY = i * RowHeight + i * RowGap;
                         float endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
-                        float safeEndX = MathExtensions.Clamp(endX, 0.0f, width);
-                        float workWidth = safeEndX - safeStartX;
+                        float workWidth = endX - startX;
 
                         if (workWidth < 0.1f)
                         {
@@ -96,7 +94,7 @@ namespace PerfView
                         context.Rectangle(
                             brush,
                             pen,
-                            safeStartX,
+                            startX,
                             startY,
                             workWidth,
                             RowHeight,
@@ -118,7 +116,7 @@ namespace PerfView
                             workVisual.DisplayName,
                             Typeface,
                             FontSize,
-                            safeStartX + Padding,
+                            startX + Padding,
                             startY + Padding,
                             textWidth,
                             RowHeight
