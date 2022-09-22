@@ -406,6 +406,11 @@
                 </controls:HistoryComboBox.ToolTip>
             </controls:HistoryComboBox>
         </Grid>
+        <src:HistogramView
+            x:Name="TimeFilterView"
+            DockPanel.Dock="Top"
+            Height="50"
+            Histogram="{Binding InclusiveMetricByTime}"/>
         <src1:StatusBar x:Name="StatusBar" DockPanel.Dock="Bottom"/>
         <!-- this is the main window -->
         <Grid>
