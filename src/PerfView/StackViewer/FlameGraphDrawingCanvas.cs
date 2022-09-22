@@ -10,7 +10,7 @@ using static PerfView.FlameGraph;
 
 namespace PerfView.StackViewer
 {
-    public class FlameGraphDrawingCanvas : PanAndZoomCanvas
+    public class FlameGraphDrawingCanvas : TransformPanAndZoomCanvas
     {
         private static readonly Typeface Typeface = new Typeface("Consolas");
         private static readonly Brush[][] Brushes = GenerateBrushes(new Random(12345));
@@ -19,10 +19,10 @@ namespace PerfView.StackViewer
         private readonly ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
 
         public FlameGraphDrawingCanvas()
+            : base()
         {
             MouseMove += OnMouseMove;
             MouseLeave += OnMouseLeave;
-            Focusable = true;
         }
 
         public bool IsEmpty => Visuals.Items.Count == 0;
@@ -72,7 +72,7 @@ namespace PerfView.StackViewer
                     flameBoxesMap.Add(box);
                 }
 
-                AddVisual(visual);
+                Visuals.Items.Add(visual);
 
                 flameBoxesMap.Sort();
             }
@@ -95,14 +95,12 @@ namespace PerfView.StackViewer
                 }
             }
 
-            PanAndZoomCanvas_MouseMove(sender, e);
             HideTooltip();
         }
 
         private void OnMouseLeave(object sender, MouseEventArgs e)
         {
             HideTooltip();
-            PanAndZoomCanvas_MouseUp(sender, null);
         }
 
         private void ShowTooltip(string text)
@@ -129,13 +127,6 @@ namespace PerfView.StackViewer
             Visuals.Items.Clear();
 
             flameBoxesMap.Clear();
-        }
-
-        private void AddVisual(Visual visual)
-        {
-            Visuals.Items.Add(visual);
-
-            AddLogicalChild(visual);
         }
 
         private static Brush[][] GenerateBrushes(Random random)

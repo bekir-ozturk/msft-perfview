@@ -6,7 +6,7 @@ using Pen = System.Windows.Media.Pen;
 
 namespace PerfView
 {
-    internal class TimelineFocusCanvas : PanAndZoomCanvas
+    internal class TimelineFocusCanvas : RenderPanAndZoomCanvas
     {
         public TimelineFocusCanvas()
             : base()
@@ -100,6 +100,5 @@ namespace PerfView
         private static readonly Typeface Typeface = new Typeface("Consolas");
 
         private readonly VisualCollectionHost m_VisualsHost;
-
     }
 }
