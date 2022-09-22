@@ -3645,6 +3645,7 @@ namespace PerfView
             else
             {
                 EndTextBox.Text = end.ToString("n3");
+                UpperSlider.Value = end;
             }
 
             // See if we are pasting a range into the start text box
@@ -3670,6 +3671,8 @@ namespace PerfView
                     return false;
                 }
             }
+
+            LowerSlider.Value = start;
 
             if (end < start)
             {
@@ -4218,7 +4221,7 @@ namespace PerfView
                 --GuiApp.MainWindow.NumWindowsNeedingSaving;
             }
         }
-        
+
         private bool needsUpdate;
 
         private void LowerSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

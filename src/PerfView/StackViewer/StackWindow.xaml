@@ -292,7 +292,7 @@
                         <TextBlock>Exclude any samples that happened before this time (MSec from start).</TextBlock>
                     </controls:HistoryComboBox.ToolTip>
                 </controls:HistoryComboBox>
-                <Grid VerticalAlignment="Top"  Margin="10,0,1,0" Width="100">
+                <Grid VerticalAlignment="Top"  Margin="10,0,1,0" Width="200">
                     <Border BorderThickness="0,1,0,0" BorderBrush="Black" VerticalAlignment="Center" Height="1" Margin="5,0,5,0"/>
                     <Slider x:Name="LowerSlider" ValueChanged="LowerSlider_ValueChanged" Thumb.DragCompleted="Slider_DragCompleted" Template="{StaticResource rangeSlider}" Margin="0,0,10,0" />
                     <Slider x:Name="UpperSlider" ValueChanged="UpperSlider_ValueChanged"  Thumb.DragCompleted="Slider_DragCompleted" Template="{StaticResource rangeSlider}" Margin="10,0,0,0" />
