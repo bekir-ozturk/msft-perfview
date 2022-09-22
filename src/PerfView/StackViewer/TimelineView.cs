@@ -1,8 +1,8 @@
 ﻿using Microsoft.Diagnostics.Tracing.Stacks;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace PerfView
 {
@@ -10,33 +10,64 @@ namespace PerfView
     {
         private CallTree _callTree = null;
 
-        private readonly TimelineVisuals _visuals = new TimelineVisuals();
-
-        /// <summary>
-        /// What is the first frame that is being drawn on our canvas?
-        /// The last frame will depend on the width of the canvas, which may be resized by user.
-        /// The first frame will always be fixed, unless user drags or uses the scroll bar.
-        /// </summary>
-        private int _startingFrameIndex = 0;
-
-        /// <summary>
-        /// Pixels per frame: how many pixels do we need to draw a single frame.
-        /// This value will provide zooming in and out functinality.
-        /// </summary>
-        private double _pixelsPerFrame = 1d;
+        private readonly TimelineVisuals _visuals = new TimelineVisuals
+        {
+            StartingFrame = 200,
+            EndingFrame = 2000,
+            VisualsPerThreadId = new Dictionary<int, List<WorkVisual>>{
+                {
+                    125,
+                    new List<WorkVisual>{
+                        new WorkVisual
+                        {
+                            StartingFrame = 100,
+                            EndingFrame = 325,
+                            DisplayName = "Thread 125 A",
+                            DisplayColor = Colors.Yellow,
+                            IsGroupingSmallWork = false
+                        },
+                        new WorkVisual
+                        {
+                            StartingFrame = 650,
+                            EndingFrame = 700,
+                            DisplayName = "Thread 125 B",
+                            DisplayColor = Colors.YellowGreen,
+                            IsGroupingSmallWork = true
+                        }
+                    }
+                },
+                {
+                    29125,
+                    new List<WorkVisual>{
+                        new WorkVisual
+                        {
+                            StartingFrame = 500,
+                            EndingFrame = 2150,
+                            DisplayName = "Thread 29125",
+                            DisplayColor = Colors.Turquoise,
+                            IsGroupingSmallWork = false
+                        }
+                    }
+                }
+            }
+        };
 
         public bool IsInitialized { get; private set; } = false;
 
         public TimelineView()
         {
             InitializeComponent();
+
+            SummaryCanvas.SizeChanged += (s, e) => { UpdateSummaryCanvas(_visuals); };
+            FocusCanvas.SizeChanged += (s, e) => { UpdateFocusCanvas(_visuals); };
         }
 
         public async Task InitializeAsync(CallTree callTree)
         {
             _callTree = callTree;
             RepopulateVisualsData(_callTree, _visuals);
-            UpdateCanvas(_visuals);
+            UpdateSummaryCanvas(_visuals);
+            UpdateFocusCanvas(_visuals);
             IsInitialized = true;
         }
 
@@ -45,9 +76,34 @@ namespace PerfView
             // To be implemented by Bekir
         }
 
-        private void UpdateCanvas(TimelineVisuals visuals)
+        private void UpdateSummaryCanvas(TimelineVisuals visuals)
         {
-            // To be implemented by Radek Barton
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            if (RenderSize.IsEmpty)
+            {
+                return;
+            }
+
+            SummaryCanvas.Update();
+        }
+
+        private void UpdateFocusCanvas(TimelineVisuals visuals)
+        {
+            if (!IsInitialized)
+            {
+                return;
+            }
+
+            if (RenderSize.IsEmpty)
+            {
+                return;
+            }
+
+            FocusCanvas.Update(visuals);
         }
     }
 }

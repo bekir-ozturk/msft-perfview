@@ -1,14 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.Windows.Media;
 
 namespace PerfView
 {
     internal class TimelineVisuals
     {
-        public int StartingFrame { get; set; }
+        public float StartingFrame { get; set; }
 
-        public int EndingFrame { get; set; }
+        public float EndingFrame { get; set; }
 
-        Dictionary<int, List<WorkVisual>> VisualsPerThreadId { get; set; }
+        public Dictionary<int, List<WorkVisual>> VisualsPerThreadId { get; set; } = new Dictionary<int, List<WorkVisual>>();
     }
 
     /// <summary>
@@ -16,9 +17,10 @@ namespace PerfView
     /// </summary>
     internal class WorkVisual
     {
-        public int StartingFrame { get; set; }
-        public int EndingFrame { get; set; }
+        public float StartingFrame { get; set; }
+        public float EndingFrame { get; set; }
         public string DisplayName { get; set; }
+        public Color DisplayColor { get; set; }
 
         /// <summary>
         /// Gets or sets the value indicating whether this visual is a representation

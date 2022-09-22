@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -18,13 +17,20 @@ namespace PerfView.StackViewer
         private readonly GroupBox _zoomGroupBox = new GroupBox();
         private readonly CheckBox _zoomXAxis = new CheckBox();
         private readonly CheckBox _zoomYAxis = new CheckBox();
-        protected readonly List<Visual> visuals = new List<Visual>();
         private Point _initialMousePosition;
         private bool _isDragging;
         private bool _isZooming;
 
+        public VisualCollectionHost Visuals
+        {
+            get { return m_VisualsHost; }
+        }
+
         public PanAndZoomCanvas()
         {
+            m_VisualsHost = new VisualCollectionHost(this);
+            Children.Add(m_VisualsHost);
+
             _panningGroupBox.Header = "Panning";
             StackPanel panStackPanel = new StackPanel();
             AddCheckBox(_panXAxis, "X-Axis", panStackPanel);
@@ -49,7 +55,12 @@ namespace PerfView.StackViewer
 
         public bool IsZoomed => _transform.Matrix.M11 != 1.0 || _transform.Matrix.M22 != 1.0;
 
-        protected override int VisualChildrenCount => visuals.Count + 1;
+        protected override int VisualChildrenCount => Visuals.Items.Count + 1;
+
+        protected override Visual GetVisualChild(int index)
+        {
+            return index == VisualChildrenCount - 1 ? _controls : Visuals.Items[index];
+        }
 
         private void PanAndZoomCanvas_KeyDown(object sender, KeyEventArgs e)
         {
@@ -82,11 +93,6 @@ namespace PerfView.StackViewer
         private void PanAndZoomCanvas_KeyUp(object sender, KeyEventArgs e)
         {
             _isZooming = false;
-        }
-
-        protected override Visual GetVisualChild(int index)
-        {
-            return index == 0 ? _controls : visuals[index - 1];
         }
 
         private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
@@ -124,6 +130,8 @@ namespace PerfView.StackViewer
             Cursor = Cursors.Arrow;
         }
 
+        private readonly VisualCollectionHost m_VisualsHost;
+
         private void PanCanvas(Vector delta)
         {
             if (!_panXAxis.IsChecked.Value)
@@ -139,7 +147,7 @@ namespace PerfView.StackViewer
             TranslateTransform translate = new TranslateTransform(delta.X, delta.Y);
             _transform.Matrix = translate.Value * _transform.Matrix;
 
-            foreach (DrawingVisual child in visuals.Cast<DrawingVisual>())
+            foreach (DrawingVisual child in Visuals.Items.Cast<DrawingVisual>())
             {
                 child.Transform = _transform;
             }
