@@ -28,6 +28,9 @@ namespace PerfView
 
             SummaryCanvas.SizeChanged += (s, e) => { UpdateSummaryCanvas(_visuals); };
             FocusCanvas.SizeChanged += (s, e) => { UpdateFocusCanvas(_visuals); };
+            FocusCanvas.Reset += (s, e) => { OnFocusCanvasReset(e); };
+            FocusCanvas.Pan += (s, e) => { OnFocusCanvasPan(e.TimeDelta); };
+            FocusCanvas.Zoom += (s, e) => { OnFocusCanvasZoom(e.TimeOffset, e.Scale); };
         }
 
         public void InitializeAsync(CallTree callTree)
@@ -36,7 +39,6 @@ namespace PerfView
             RepopulateVisualsData(_callTree, _visuals);
             InitalizationComplete = true;
             UpdateSummaryCanvas(_visuals);
-            UpdateFocusCanvas(_visuals);
         }
 
         private void RepopulateVisualsData(CallTree callTree, TimelineVisuals visuals)
@@ -100,7 +102,7 @@ namespace PerfView
                 int sampleAtTheEndOfInterest = st.Value.Skip(firstSampleOfInterest).TakeWhile(s => (int)s.sample.SampleIndex < visuals.EndingFrame).Count() + firstSampleOfInterest;
                 sampleAtTheEndOfInterest = Math.Min(st.Value.Count, sampleAtTheEndOfInterest + 1);
 
-                if (!FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 0, 40, 150, works))
+                if (FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 0, 40, 150, works))
                 {
                     works.Add(new WorkVisual()
                     {
@@ -112,10 +114,12 @@ namespace PerfView
                     });
                 }
             }
+
+            UpdateFocusCanvas(_visuals);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="samples">All samples of the thread.</param>
         /// <param name="startIndex">First sample in the range of interest.</param>
@@ -297,6 +301,34 @@ namespace PerfView
             FocusCanvas.Update(visuals);
         }
 
+        private void OnFocusCanvasReset(EventArgs e)
+        {
+            RepopulateVisualsData(_callTree, _visuals);
+
+            FocusCanvas.Update(_visuals);
+        }
+
+        private void OnFocusCanvasPan(float timeDelta)
+        {
+            _visuals.StartingFrame -= timeDelta;
+            _visuals.EndingFrame -= timeDelta;
+
+            RepopulateVisualsData(_callTree, _visuals);
+
+            FocusCanvas.Update(_visuals);
+        }
+
+        private void OnFocusCanvasZoom(float timeOffset, float scale)
+        {
+            float scaleCenter = _visuals.StartingFrame + timeOffset;
+            _visuals.StartingFrame = scaleCenter - ((scaleCenter - _visuals.StartingFrame) / scale);
+            _visuals.EndingFrame = scaleCenter + ((_visuals.EndingFrame - scaleCenter) / scale);
+
+            RepopulateVisualsData(_callTree, _visuals);
+
+            FocusCanvas.Update(_visuals);
+        }
+
         private static int GetThreadIdFromFrameName(string frameName)
         {
             int indexOfClosingParanthesis = frameName.IndexOf(')');
@@ -317,6 +349,7 @@ namespace PerfView
         {
             return ColorUtilities.ColorFromHSV(270, 0.4, .7 + _random.NextDouble() / 3d);
         }
+
         internal class StackInfo
         {
             public int ThreadId { get; set; }

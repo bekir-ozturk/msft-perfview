@@ -1,18 +1,33 @@
-﻿using PerfView.StackViewer;
+using System;
 using System.Drawing;
 using System.Linq;
+using System.Windows;
 using System.Windows.Media;
 using Pen = System.Windows.Media.Pen;
+using Point = System.Windows.Point;
 
 namespace PerfView
 {
-    internal class TimelineFocusCanvas : RenderPanAndZoomCanvas
+    internal class TimelineFocusCanvas : PanAndZoomCanvas
     {
+        public class PanEventArgs : EventArgs
+        {
+            public float TimeDelta { get; set; }
+        }
+
+        public class ZoomEventArgs : EventArgs
+        {
+            public float TimeOffset { get; set; }
+            public float Scale { get; set; }
+        }
+
+        public event EventHandler<EventArgs> Reset;
+        public event EventHandler<PanEventArgs> Pan;
+        public event EventHandler<ZoomEventArgs> Zoom;
+
         public TimelineFocusCanvas()
             : base()
         {
-            m_VisualsHost = new VisualCollectionHost(this);
-            Children.Add(m_VisualsHost);
         }
 
         internal void Update(TimelineVisuals visuals)
@@ -31,15 +46,15 @@ namespace PerfView
             const int RowHeight = 20;
             const int Padding = 5;
             const float FontSize = RowHeight - (2 * Padding);
-            double width = RenderSize.Width;
-            double height = RenderSize.Height;
+            float width = (float)RenderSize.Width;
+            float height = (float)RenderSize.Height;
             int threadsCount = visuals.VisualsPerThreadId.Count;
-            int startingFrame = visuals.StartingFrame;
-            int endingFrame = visuals.EndingFrame;
-            int range = endingFrame - startingFrame;
-            double scale = width / range;
+            float startingFrame = visuals.StartingFrame;
+            float endingFrame = visuals.EndingFrame;
+            float range = endingFrame - startingFrame;
+            m_PixelsPerUnit = width / range;
 
-            double fontSizeInPoints = new Font(
+            float fontSizeInPoints = new Font(
                 Typeface.FontFamily.ToString(),
                 FontSize,
                 GraphicsUnit.Pixel
@@ -47,6 +62,7 @@ namespace PerfView
                 .SizeInPoints;
 
             DrawingVisual visual = new DrawingVisual();
+
             using (DrawingContext context = visual.RenderOpen())
             {
                 var threads = visuals.VisualsPerThreadId.Select(
@@ -65,41 +81,80 @@ namespace PerfView
                             new SolidColorBrush(workVisual.DisplayColor.Scale(0.8)),
                             1.0
                         );
-                        double startX = (workVisual.StartingFrame - startingFrame) * scale;
-                        double startY = i * RowHeight + i * RowGap;
-                        double endX = (workVisual.EndingFrame - startingFrame) * scale;
-                        double workWidth = endX - startX;
+                        float startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
+                        float safeStartX = MathExtensions.Clamp(startX, 0.0f, width);
+                        float startY = i * RowHeight + i * RowGap;
+                        float endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
+                        float safeEndX = MathExtensions.Clamp(endX, 0.0f, width);
+                        float workWidth = safeEndX - safeStartX;
+
+                        if (workWidth < 0.1f)
+                        {
+                            continue;
+                        }
+
                         context.Rectangle(
                             brush,
                             pen,
-                            startX,
+                            safeStartX,
                             startY,
                             workWidth,
                             RowHeight,
-                            5
+                            Padding
                         );
 
-                        if (workVisual.DisplayName != null)
+                        double textWidth = workWidth - (2 * Padding);
+                        if (textWidth < 0.1f)
                         {
-                            context.Text(
-                                workVisual.DisplayName,
-                                Typeface,
-                                FontSize,
-                                startX + Padding,
-                                startY + Padding,
-                                workWidth - (2 * Padding),
-                                RowHeight
-                            );
+                            continue;
                         }
+
+                        if (workVisual.DisplayName == null)
+                        {
+                            continue;
+                        }
+
+                        context.Text(
+                            workVisual.DisplayName,
+                            Typeface,
+                            FontSize,
+                            safeStartX + Padding,
+                            startY + Padding,
+                            textWidth,
+                            RowHeight
+                        );
                     }
                 }
             }
 
-            m_VisualsHost.Replace(visual, 0);
+            Visuals.Replace(visual, 0);
+        }
+
+        protected override Point GetTransformedPosition(Point point)
+        {
+            return point;
+        }
+
+        protected override void OnPan(Vector delta)
+        {
+            float timeDelta = (float)delta.X / m_PixelsPerUnit;
+            Pan.Invoke(this, new PanEventArgs { TimeDelta = timeDelta });
+        }
+
+        protected override void OnReset()
+        {
+            Reset.Invoke(this, new EventArgs());
+        }
+
+        protected override void OnZoom(Point center, Vector delta)
+        {
+            float timeOffset = (float)center.X / m_PixelsPerUnit;
+            float scale = (float)delta.X;
+            Zoom.Invoke(this, new ZoomEventArgs { TimeOffset = timeOffset, Scale = scale });
         }
 
         private static readonly Typeface Typeface = new Typeface("Consolas");
 
-        private readonly VisualCollectionHost m_VisualsHost;
+        private float m_PixelsPerUnit = 1.0f;
     }
 }

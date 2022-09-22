@@ -72,7 +72,7 @@ namespace PerfView.StackViewer
                     flameBoxesMap.Add(box);
                 }
 
-                Visuals.Items.Add(visual);
+                AddVisual(visual);
 
                 flameBoxesMap.Sort();
             }
@@ -124,9 +124,26 @@ namespace PerfView.StackViewer
 
         private void Clear()
         {
-            Visuals.Items.Clear();
+            for (int i = Visuals.Items.Count - 1; i >= 0; i--)
+            {
+                DeleteVisual(Visuals.Items[i]);
+            }
 
             flameBoxesMap.Clear();
+        }
+
+        private void AddVisual(Visual visual)
+        {
+            Visuals.Items.Add(visual);
+
+            AddLogicalChild(visual);
+        }
+
+        private void DeleteVisual(Visual visual)
+        {
+            Visuals.Items.Remove(visual);
+
+            RemoveLogicalChild(visual);
         }
 
         private static Brush[][] GenerateBrushes(Random random)

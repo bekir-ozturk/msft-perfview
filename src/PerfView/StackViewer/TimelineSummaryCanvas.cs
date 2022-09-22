@@ -26,6 +26,13 @@ namespace PerfView
             m_VisualsHost.Replace(visual, 0);
         }
 
+        protected override int VisualChildrenCount => m_VisualsHost.Items.Count;
+
+        protected override Visual GetVisualChild(int index)
+        {
+            return m_VisualsHost.Items[index];
+        }
+
         private readonly VisualCollectionHost m_VisualsHost;
     }
 }

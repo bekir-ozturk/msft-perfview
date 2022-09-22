@@ -38,10 +38,11 @@ namespace PerfView
             Focusable = true;
 
             KeyDown += OnKeyDown;
-            KeyUp += PanAndZoomCanvas_KeyUp;
+            KeyUp += OnKeyUp;
             MouseDown += OnMouseDown;
             MouseMove += OnMouseMove;
             MouseUp += OnMouseUp;
+            MouseLeave += OnMouseLeave;
             MouseWheel += OnMouseWheel;
 
 
@@ -76,6 +77,12 @@ namespace PerfView
             SetZIndex(controlsBorder, 1);
         }
 
+        protected override int VisualChildrenCount => Visuals.Items.Count + 1;
+
+        protected override Visual GetVisualChild(int index)
+        {
+            return index == 0 ? m_Controls : Visuals.Items[index - 1];
+        }
 
         protected abstract Point GetTransformedPosition(Point point);
         protected abstract void OnReset();
@@ -96,6 +103,7 @@ namespace PerfView
         private bool m_IsZooming;
         private bool m_IsDragging;
         private Point m_InitialMousePosition;
+        private Point m_LastMousePosition;
 
         private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
         {
@@ -133,7 +141,7 @@ namespace PerfView
             }
         }
 
-        private void PanAndZoomCanvas_KeyUp(object sender, KeyEventArgs e)
+        private void OnKeyUp(object sender, KeyEventArgs e)
         {
             m_IsCtrlDown = false;
         }
@@ -142,8 +150,11 @@ namespace PerfView
         {
             if (e.ChangedButton == MouseButton.Left)
             {
-                m_InitialMousePosition = GetTransformedPosition(e.GetPosition(this));
+                m_InitialMousePosition = e.GetPosition(this);
+                m_LastMousePosition = m_InitialMousePosition;
+
                 Cursor = Cursors.Hand;
+
                 if (m_IsCtrlDown)
                 {
                     m_IsZooming = true;
@@ -152,7 +163,6 @@ namespace PerfView
                 {
                     m_IsDragging = true;
                 }
-
             }
         }
 
@@ -160,28 +170,40 @@ namespace PerfView
         {
             if (e.LeftButton == MouseButtonState.Pressed && (m_IsDragging || m_IsZooming))
             {
-                Point mousePosition = GetTransformedPosition(e.GetPosition(this));
+                Point lastPosition = GetTransformedPosition(m_LastMousePosition);
+                Point currentPosition = GetTransformedPosition(e.GetPosition(this));
                 if (m_IsDragging)
                 {
-                    Vector delta = Point.Subtract(mousePosition, m_InitialMousePosition);
-                    PanCanvas(delta);
+                    PanCanvas(currentPosition - lastPosition);
                 }
                 if (m_IsZooming)
                 {
-                    Vector diff = (e.GetPosition(this) - m_InitialMousePosition);
-                    int delta = (int)diff.Length / 2;
-                    if (diff.X < 0)
+                    Vector delta = (currentPosition - lastPosition);
+
+                    int zoomDelta = (int)delta.Length;
+                    if (delta.X < 0)
                     {
-                        delta *= -1;
+                        zoomDelta *= -1;
                     }
-                    ZoomCanvas(m_InitialMousePosition, delta);
+                    ZoomCanvas(m_InitialMousePosition, zoomDelta);
                 }
+
+                m_LastMousePosition = e.GetPosition(this);
             }
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
             m_IsDragging = false;
+            m_IsZooming = false;
+            m_InitialMousePosition = default;
+            Cursor = Cursors.Arrow;
+        }
+
+        private void OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            m_IsDragging = false;
+            m_IsZooming = false;
             m_InitialMousePosition = default;
             Cursor = Cursors.Arrow;
         }
@@ -220,17 +242,12 @@ namespace PerfView
 
         private void ZoomCanvas(Point center, int delta)
         {
-            if (delta == 1.0f)
+            if (delta == 0.0f)
             {
                 return;
             }
 
-            float scaleFactor = 1.0f + (0.001f * Math.Abs(delta));
-            if (delta < 0)
-            {
-                scaleFactor = 1.0f / scaleFactor;
-            }
-
+            float scaleFactor = 1.0f + (0.001f * delta);
             var scale = new Vector(IsZoomingX ? scaleFactor : 1.0f, IsZoomingY ? scaleFactor : 1.0f);
 
             OnZoom(center, scale);
