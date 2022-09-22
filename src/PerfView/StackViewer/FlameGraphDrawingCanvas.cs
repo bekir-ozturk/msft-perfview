@@ -25,7 +25,7 @@ namespace PerfView.StackViewer
             Focusable = true;
         }
 
-        public bool IsEmpty => visuals.Count == 0;
+        public bool IsEmpty => Visuals.Items.Count == 0;
 
         public void Draw(IEnumerable<FlameBox> boxes)
         {
@@ -126,27 +126,16 @@ namespace PerfView.StackViewer
 
         private void Clear()
         {
-            for (int i = visuals.Count - 1; i >= 0; i--)
-            {
-                DeleteVisual(visuals[i]);
-                visuals.RemoveAt(i);
-            }
+            Visuals.Items.Clear();
 
             flameBoxesMap.Clear();
         }
 
         private void AddVisual(Visual visual)
         {
-            visuals.Add(visual);
+            Visuals.Items.Add(visual);
 
-            AddVisualChild(visual);
             AddLogicalChild(visual);
-        }
-
-        private void DeleteVisual(Visual visual)
-        {
-            RemoveVisualChild(visual);
-            RemoveLogicalChild(visual);
         }
 
         private static Brush[][] GenerateBrushes(Random random)
