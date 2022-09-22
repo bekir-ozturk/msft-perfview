@@ -34,9 +34,9 @@ namespace PerfView
         {
             _callTree = callTree;
             RepopulateVisualsData(_callTree, _visuals);
+            InitalizationComplete = true;
             UpdateSummaryCanvas(_visuals);
             UpdateFocusCanvas(_visuals);
-            InitalizationComplete = true;
         }
 
         private void RepopulateVisualsData(CallTree callTree, TimelineVisuals visuals)
@@ -189,7 +189,7 @@ namespace PerfView
 
                             visuals.Add(new WorkVisual()
                             {
-                                StartingFrame = groupedWorkStart,
+                                StartingFrame = (int)samples[groupedWorkStart].sample.SampleIndex,
                                 EndingFrame = (int)currentSampleIndex,
                                 DisplayColor = Colors.DimGray,
                                 DisplayName = "Other",
@@ -216,8 +216,8 @@ namespace PerfView
                         {
                             visuals.Add(new WorkVisual()
                             {
-                                StartingFrame = groupedWorkStart,
-                                EndingFrame = lastWorkStart,
+                                StartingFrame = (int)samples[groupedWorkStart].sample.SampleIndex,
+                                EndingFrame = (int)samples[lastWorkStart].sample.SampleIndex,
                                 DisplayColor = Colors.DimGray,
                                 DisplayName = "Other",
                                 IsGroupingSmallWork = true,
@@ -249,9 +249,10 @@ namespace PerfView
                             });
                         }
 
-                        // Frame changed, one work ended the other is starting.
-                        lastWorkStart = i;
                     }
+
+                    // Frame changed, one work ended the other is starting.
+                    lastWorkStart = i;
 
                     if (!noMoreSamplesLeft)
                     {
