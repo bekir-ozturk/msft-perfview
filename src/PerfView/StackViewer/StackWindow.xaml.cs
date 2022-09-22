@@ -2977,6 +2977,8 @@ namespace PerfView
                       ? FlameGraph.Calculate(CallTree, FlameGraphCanvas.ActualWidth, FlameGraphCanvas.ActualHeight)
                       : Enumerable.Empty<FlameGraph.FlameBox>());
 
+            ColorLegendcCanvas.Draw(ColorLegendcCanvas.ActualWidth, ColorLegendcCanvas.ActualHeight);
+
             m_RedrawFlameGraphWhenItBecomesVisible = false;
         }
 

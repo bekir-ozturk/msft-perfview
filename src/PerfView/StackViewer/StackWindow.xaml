@@ -481,13 +481,24 @@
                             Flame Graph <Hyperlink Command="Help" CommandParameter="FlameGraphView">?</Hyperlink>
                         </TextBlock>
                     </TabItem.Header>
-                    <src:FlameGraphDrawingCanvas x:Name="FlameGraphCanvas" Background="White" ClipToBounds="True" SizeChanged="FlameGraphCanvas_SizeChanged" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged">
-                        <Canvas.ContextMenu>
-                            <ContextMenu Name="noContextMenu" Visibility="Visible">
-                                <MenuItem Header="Save Flame Graph" Command="{x:Static src:StackWindow.SaveFlameGraphCommand}" />
-                            </ContextMenu>
-                        </Canvas.ContextMenu>
-                    </src:FlameGraphDrawingCanvas>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="171*"/>
+                            <RowDefinition Height="155*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="4*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <src:FlameGraphDrawingCanvas x:Name="FlameGraphCanvas" Background="White" ClipToBounds="True" SizeChanged="FlameGraphCanvas_SizeChanged" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged" Grid.RowSpan="2" Grid.ColumnSpan="2">
+                            <Canvas.ContextMenu>
+                                <ContextMenu Name="noContextMenu" Visibility="Visible">
+                                    <MenuItem Header="Save Flame Graph" Command="{x:Static src:StackWindow.SaveFlameGraphCommand}" />
+                                </ContextMenu>
+                            </Canvas.ContextMenu>
+                        </src:FlameGraphDrawingCanvas>
+                        <src:ColorLegendDrawingCanvas x:Name="ColorLegendcCanvas" ClipToBounds="True" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged" Grid.Column="1" />
+                    </Grid>
                 </TabItem>
                 <!-- NotesTab -->
                 <TabItem Name="NotesTab" GotFocus="NotesTab_GotFocus" LostFocus="NotesTab_LostFocus">

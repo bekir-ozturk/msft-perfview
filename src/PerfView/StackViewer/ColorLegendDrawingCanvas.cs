@@ -9,7 +9,7 @@ using static PerfView.FlameGraph;
 
 namespace PerfView
 {
-    public class FlameGraphDrawingCanvas : Canvas
+    public class ColorLegendDrawingCanvas : Canvas
     {
         private static readonly Typeface Typeface = new Typeface("Consolas");
 
@@ -21,7 +21,7 @@ namespace PerfView
         private ScaleTransform scaleTransform = new ScaleTransform(1.0f, 1.0f, 0.0f, 0.0f);
         private Cursor cursor;
 
-        public FlameGraphDrawingCanvas()
+        public ColorLegendDrawingCanvas()
         {
             MouseMove += OnMouseMove;
             MouseLeave += OnMouseLeave;
@@ -54,62 +54,68 @@ namespace PerfView
                 Color.FromRgb(173,255,47)
             };
 
-        public void Draw(IEnumerable<FlameBox> boxes)
+        public void Draw(double witdh, double height)
         {
             Clear();
 
-            var random = new Random(11);
             var visual = new DrawingVisual { Transform = scaleTransform }; // we have only one visual to provide best possible perf
 
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
-                System.Drawing.Font forSize = null;
 
-                foreach (var box in boxes)
-                {
-                    SolidColorBrush brush;
-                    if (box.Color == FlameColor.Default)
-                    {
-                        var id = random.Next(3);
-                        brush = new SolidColorBrush(greenShades[id]);
-                    }
-                    else {
-                        brush = new SolidColorBrush(colorsMapping[box.Color]);
-                    }
-
-                    drawingContext.DrawRectangle(
-                        brush,
-                        null,  // no Pen is crucial for performance
-                        new Rect(box.X, box.Y, box.Width, box.Height));
-
-                    if (box.Width * scaleTransform.ScaleX > 50 && box.Height * scaleTransform.ScaleY >= 6) // we draw the text only if humans can see something
-                    {
-                        if (forSize == null)
-                        {
-                            forSize = new System.Drawing.Font("Consolas", (float)box.Height, System.Drawing.GraphicsUnit.Pixel);
-                        }
-
-                        var text = new FormattedText(
-                                box.Node.DisplayName,
-                                CultureInfo.InvariantCulture,
-                                FlowDirection.LeftToRight,
-                                Typeface,
-                                Math.Min(forSize.SizeInPoints, 20),
-                                System.Windows.Media.Brushes.Black);
-
-                        text.MaxTextWidth = box.Width;
-                        text.MaxTextHeight = box.Height;
-
-                        drawingContext.DrawText(text, new Point(box.X, box.Y));
-                    }
-
-                    flameBoxesMap.Add(box);
-                }
-
+                DrawColorLegend(drawingContext, height/30, witdh/3);
                 AddVisual(visual);
 
                 flameBoxesMap.Sort();
             }
+        }
+
+        private void DrawColorLegend(DrawingContext drawingContext, double blockSize, double borderLine) {
+
+           // var blockSize = 10;
+            var gap = blockSize;
+
+            var forSize = new System.Drawing.Font("Consolas", (int)blockSize, System.Drawing.GraphicsUnit.Pixel);
+
+            foreach (var color in FlameBox.MappingToColor) {
+              var rgbColor = colorsMapping[color.Value];
+                drawingContext.DrawRectangle(
+                    new SolidColorBrush(rgbColor),
+                    null,
+                    new Rect(blockSize, gap, blockSize, blockSize));
+
+                var text = new FormattedText(
+                        color.Key,
+                        CultureInfo.InvariantCulture,
+                        FlowDirection.LeftToRight,
+                        Typeface,
+                        Math.Min(forSize.SizeInPoints, 20),
+                        Brushes.Black);
+
+                drawingContext.DrawText(text, new Point(3*blockSize, gap));
+
+                gap += (blockSize*2);
+            }
+
+            drawingContext.DrawRectangle(
+                new SolidColorBrush(greenShades[0]),
+                null,
+                new Rect(blockSize, gap, blockSize, blockSize));
+
+            var textModule = new FormattedText(
+                "Module",
+                 CultureInfo.InvariantCulture,
+                 FlowDirection.LeftToRight,
+                 Typeface,
+                 Math.Min(forSize.SizeInPoints, 20),
+                 Brushes.Black);
+
+            drawingContext.DrawText(textModule, new Point(3 * blockSize, gap));
+
+            drawingContext.DrawRectangle(
+                 null,
+                new Pen(new SolidColorBrush(Color.FromRgb(0, 0, 0)), 1),
+                new Rect(0, 0, borderLine, gap + (blockSize * 2)));
         }
 
         /// <summary>
