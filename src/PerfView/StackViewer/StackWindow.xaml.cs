@@ -363,7 +363,7 @@ namespace PerfView
 
                 if (histogramEnd > histogramStart)
                 {
-                    newCallTree.TimeHistogramController = new TimeHistogramController(newCallTree, histogramStart, histogramEnd);
+                    newCallTree.TimeHistogramController = new TimeHistogramController(newCallTree, histogramStart, histogramEnd, 128);
                 }
 
                 if (m_stackSource.ScenarioCount > 0)

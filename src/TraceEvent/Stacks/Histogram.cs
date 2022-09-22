@@ -21,6 +21,8 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
     /// </summary>
     public class Histogram : IEnumerable<float>
     {
+        public static readonly int DefaultCharacterCount = 32;
+
         /// <summary>
         /// Create a new histogram.  Every histogram needs a controller but these controllers 
         /// can be shared among many histograms.  
@@ -366,10 +368,10 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
         /// Initialize a new HistogramController.
         /// </summary>
         /// <param name="tree">The CallTree that this HistogramController controls.</param>
-        protected HistogramController(CallTree tree)
+        protected HistogramController(CallTree tree, int bucketCount, int characterCount)
         {
-            BucketCount = 32;
-            CharacterCount = 32;
+            BucketCount = bucketCount;
+            CharacterCount = characterCount;
             Tree = tree;
         }
         /// <summary>
@@ -427,12 +429,9 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
         /// This number might be larger than the highest number in <paramref name="scenarios"/>.</param>
         /// <param name="scenarioNames">The names of the scenarios (for UI use).</param>
         public ScenarioHistogramController(CallTree tree, int[] scenarios, int totalScenarios, string[] scenarioNames = null)
-            : base(tree)
+            : base(tree, totalScenarios, Math.Min(scenarios.Length, Histogram.DefaultCharacterCount))
         {
             Debug.Assert(totalScenarios > 0);
-
-            BucketCount = totalScenarios;
-            CharacterCount = Math.Min(scenarios.Length, CharacterCount);
 
             m_scenariosFromCharacter = new List<int>[CharacterCount];
             m_characterFromScenario = new HistogramCharacterIndex[BucketCount];
@@ -610,8 +609,8 @@ namespace Microsoft.Diagnostics.Tracing.Stacks
         /// <param name="tree">The CallTree to control with this controller.</param>
         /// <param name="start">The start time of the histogram.</param>
         /// <param name="end">The end time of the histogram.</param>
-        public TimeHistogramController(CallTree tree, double start, double end)
-            : base(tree)
+        public TimeHistogramController(CallTree tree, double start, double end, int bucketCount)
+            : base(tree, bucketCount, Histogram.DefaultCharacterCount)
         {
             Start = start;
             End = end;
