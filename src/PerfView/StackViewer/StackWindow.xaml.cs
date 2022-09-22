@@ -4292,6 +4292,17 @@ namespace PerfView
             needsUpdate = false;
         }
 
+        private void TimeFilterView_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            var range = UpperSlider.Value - LowerSlider.Value;
+            var start = TimeFilterView.StartPoint * range + LowerSlider.Value;
+            var end = TimeFilterView.EndPoint * range + LowerSlider.Value;
+            needsUpdate = true;
+            LowerSlider.Value = start;
+            UpperSlider.Value = end;
+            Update();
+        }
+
         private StackSource m_stackSource;
         internal CallTree m_callTree;
 
