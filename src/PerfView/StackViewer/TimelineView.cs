@@ -100,7 +100,7 @@ namespace PerfView
                 int sampleAtTheEndOfInterest = st.Value.Skip(firstSampleOfInterest).TakeWhile(s => (int)s.sample.SampleIndex < visuals.EndingFrame).Count() + firstSampleOfInterest;
                 sampleAtTheEndOfInterest = Math.Min(st.Value.Count, sampleAtTheEndOfInterest + 1);
 
-                if (FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 0, 40, 150, works))
+                if (!FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 0, 40, 150, works))
                 {
                     works.Add(new WorkVisual()
                     {
