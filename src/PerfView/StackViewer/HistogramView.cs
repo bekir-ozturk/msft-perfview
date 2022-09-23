@@ -12,6 +12,7 @@ namespace PerfView
         private readonly Line _startLine = new Line();
         private readonly Line _endLine = new Line();
         private bool _isDragging;
+        private SolidColorBrush _geometryBrush = new SolidColorBrush(Color.FromRgb(229, 212, 157));
 
         public static readonly DependencyProperty HistogramProperty = DependencyProperty.Register(
             "Histogram",
@@ -140,7 +141,7 @@ namespace PerfView
             DrawingVisual visual = new DrawingVisual();
             using (DrawingContext context = visual.RenderOpen())
             {
-                context.DrawGeometry(Brushes.OrangeRed, null, geometry);
+                context.DrawGeometry(_geometryBrush, null, geometry);
             }
 
             if (m_VisualHost.Visuals.Count == 0)

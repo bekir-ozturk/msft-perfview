@@ -30,7 +30,9 @@ namespace PerfView
             double x,
             double y,
             double width,
-            double height
+            double height,
+            Brush brush,
+            TextAlignment alignment = TextAlignment.Left
         )
         {
             var formattedText = new FormattedText(
@@ -39,11 +41,13 @@ namespace PerfView
                 FlowDirection.LeftToRight,
                 typeface,
                 Math.Min(fontSize, 20.0),
-                Brushes.Black
+                brush,
+                1.25
             )
             {
                 MaxTextWidth = width,
-                MaxTextHeight = height
+                MaxTextHeight = height,
+                TextAlignment = alignment
             };
             context.DrawText(formattedText, new Point(x, y));
         }

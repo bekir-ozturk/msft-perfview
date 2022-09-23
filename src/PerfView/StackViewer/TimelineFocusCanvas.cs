@@ -1,5 +1,4 @@
 using System;
-using System.Drawing;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -10,6 +9,9 @@ namespace PerfView
 {
     internal class TimelineFocusCanvas : PanAndZoomCanvas
     {
+        private static readonly Pen _gridLinePen = new Pen(new SolidColorBrush(Color.FromRgb(55,55,55)), 1);
+        private static readonly Pen _gridMinorLinePen = new Pen(new SolidColorBrush(Color.FromRgb(125,125,125)), 1);
+
         public class PanEventArgs : EventArgs
         {
             public float TimeDelta { get; set; }
@@ -45,6 +47,7 @@ namespace PerfView
             const int RowGap = 5;
             const int RowHeight = 20;
             const int Padding = 5;
+            const int TimeRibbonHeight = 20;
             const float FontSize = RowHeight - (2 * Padding);
             float width = (float)RenderSize.Width;
             float height = (float)RenderSize.Height;
@@ -54,17 +57,45 @@ namespace PerfView
             float range = endingFrame - startingFrame;
             m_PixelsPerUnit = width / range;
 
-            float fontSizeInPoints = new Font(
-                Typeface.FontFamily.ToString(),
-                FontSize,
-                GraphicsUnit.Pixel
-            )
-                .SizeInPoints;
-
             DrawingVisual visual = new DrawingVisual();
 
             using (DrawingContext context = visual.RenderOpen())
             {
+                int visibleFrames = (int)(visuals.EndingFrame - visuals.StartingFrame);
+                double gridPeriod = Math.Pow(10, (int)Math.Log10(visibleFrames));
+
+                double gridStartFrame = visuals.StartingFrame - (visuals.StartingFrame % gridPeriod);
+                double steps = gridPeriod / 10;
+                double minorLineOpacity = 1 - (visibleFrames - gridPeriod) / gridPeriod;
+                ((SolidColorBrush)_gridMinorLinePen.Brush).Opacity = minorLineOpacity;
+
+                int iteration = 0;
+                while (gridStartFrame < visuals.EndingFrame)
+                {
+                    double offsetX = (gridStartFrame - startingFrame) * m_PixelsPerUnit;
+                    context.DrawLine(
+                        iteration % 10 == 0 ? _gridLinePen : _gridMinorLinePen,
+                        new Point(offsetX, TimeRibbonHeight),
+                        new Point(offsetX, 1000));
+
+                    if (iteration % 10 == 0 || minorLineOpacity > 0) 
+                    {
+                        context.Text(
+                            gridStartFrame.ToString(),
+                            Typeface,
+                            FontSize,
+                            offsetX - 100,
+                            0,
+                            200,
+                            TimeRibbonHeight,
+                            iteration % 10 == 0 ? _gridLinePen.Brush : _gridMinorLinePen.Brush,
+                            TextAlignment.Center);
+                    }
+
+                    iteration++;
+                    gridStartFrame += steps;
+                }
+
                 var threads = visuals.VisualsPerThreadId.Select(
                     (Entry, Index) => new { Index, Entry.Key, Entry.Value }
                 );
@@ -81,10 +112,12 @@ namespace PerfView
                             new SolidColorBrush(workVisual.DisplayColor.Scale(0.8)),
                             1.0
                         );
-                        float startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
-                        float startY = i * RowHeight + i * RowGap;
-                        float endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
-                        float workWidth = endX - startX;
+                        double startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
+                        double startY = TimeRibbonHeight + i * RowHeight + i * RowGap;
+                        double endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
+                        startX = MathExtensions.Clamp(startX, -5, ActualWidth + 5);
+                        endX = MathExtensions.Clamp(endX, -5, ActualWidth + 5);
+                        double workWidth = endX - startX;
 
                         if (workWidth < 0.1f)
                         {
@@ -102,7 +135,7 @@ namespace PerfView
                         );
 
                         double textWidth = workWidth - (2 * Padding);
-                        if (textWidth < 0.1f)
+                        if (textWidth < 5f)
                         {
                             continue;
                         }
@@ -119,7 +152,8 @@ namespace PerfView
                             startX + Padding,
                             startY + Padding,
                             textWidth,
-                            RowHeight
+                            RowHeight,
+                            Brushes.Black
                         );
                     }
                 }

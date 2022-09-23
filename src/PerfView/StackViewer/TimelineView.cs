@@ -2,8 +2,6 @@
 using PerfView.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -73,7 +71,7 @@ namespace PerfView
                         for (int i = stackDepth - 1; i >= 0; i--)
                         {
                             sInfo.Frames[i] = callTree.StackSource.GetFrameIndex(stackIndex);
-                            string frameName = sInfo.FrameNames[i] = callTree.StackSource.GetFrameName(sInfo.Frames[i], true);
+                            string frameName = sInfo.FrameNames[i] = callTree.StackSource.GetFrameName(sInfo.Frames[i], false);
 
                             if (frameName.StartsWith("Thread ("))
                             {
@@ -103,14 +101,26 @@ namespace PerfView
                     visuals.VisualsPerThreadId[st.Key] = works = new List<WorkVisual>();
                 }
 
-                int firstSampleOfInterest = st.Value.TakeWhile(s => (int)s.sample.SampleIndex <= visuals.StartingFrame).Count();
-                firstSampleOfInterest = Math.Max(0, firstSampleOfInterest - 1);
+                int firstSampleOfInterest = 0;
+                int sampleAtTheEndOfInterest = st.Value.Count;
+                for (int i = 0; i < st.Value.Count; i++)
+                {
+                    // This can be done much quicker with binary search.
+                    int sampleIndex = (int)st.Value[i].sample.SampleIndex;
+                    if (sampleIndex < visuals.StartingFrame)
+                        firstSampleOfInterest = i;
+                    else if (sampleIndex > visuals.EndingFrame)
+                    {
+                        sampleAtTheEndOfInterest = i;
+                        break;
+                    }
+                }
 
-                int sampleAtTheEndOfInterest = st.Value.Skip(firstSampleOfInterest).TakeWhile(s => (int)s.sample.SampleIndex < visuals.EndingFrame).Count() + firstSampleOfInterest;
-                sampleAtTheEndOfInterest = Math.Min(st.Value.Count, sampleAtTheEndOfInterest + 1);
+                if (firstSampleOfInterest == sampleAtTheEndOfInterest)
+                    return; // Nothing to display.
 
-                const double minimumVisualSizeInPixels = 50;
-                const double maximumVisualSizeInPixels = 200;
+                const double minimumVisualSizeInPixels = 150;
+                const double maximumVisualSizeInPixels = 350;
                 int minimumVisualSampleCount = (int)(minimumVisualSizeInPixels / FocusCanvas.ActualWidth * (visuals.EndingFrame - visuals.StartingFrame));
                 int maximumVisualSampleCount = (int)(maximumVisualSizeInPixels / FocusCanvas.ActualWidth * (visuals.EndingFrame - visuals.StartingFrame));
                 if (!FindWorkToDisplay(st.Value, firstSampleOfInterest, sampleAtTheEndOfInterest, 1, minimumVisualSampleCount, maximumVisualSampleCount, works))
@@ -170,9 +180,12 @@ namespace PerfView
                 }
                 else
                 {
-                    // We are passed the last sample. We don't have any more samples to know the duration of this execution.
-                    // So let's just assume that this thing has executed for only 1 frame.
-                    currentSampleIndex = samples[i - 1].sample.SampleIndex + 1;
+                    // We are passed the last sample.
+                    // If there is a valid frame after this, assume that duration is up to that next sample.
+                    // If not, assume that this thing has executed for only 1 frame.
+                    currentSampleIndex = samples.Count > i 
+                        ? samples[i].sample.SampleIndex 
+                        : (samples[i - 1].sample.SampleIndex + 1);
                 }
 
                 if (trackedFrame != currentFrame // The frame is changing. Decide whether to visualize the processed samples.
@@ -244,7 +257,7 @@ namespace PerfView
                         if (chunkSize > maximumVisualSampleCount)
                         {
                             // This work is too big to visualise alone. Try to split into multiple pieces.
-                            if (FindWorkToDisplay(samples, lastWorkStart, i, frameDepth+1, minimumVisualSampleCount, maximumVisualSampleCount, visuals))
+                            if (FindWorkToDisplay(samples, lastWorkStart, i, frameDepth + 1, minimumVisualSampleCount, maximumVisualSampleCount, visuals))
                             {
                                 // We managed to split this work. Don't try again.
                                 createdVisuals = true;
@@ -276,6 +289,14 @@ namespace PerfView
                         trackedFrameName = stack.FrameNames.Length > frameDepth
                             ? stack.FrameNames[frameDepth]
                             : "Self";
+                        if (trackedFrameName == "BLOCKED_TIME" || trackedFrameName == "CPU_TIME")
+                        {
+                            if (frameDepth > 0)
+                            {
+                                trackedFrameName += " " + stack.FrameNames[frameDepth - 1];
+                            }
+
+                        }
                     }
                 }
             }
