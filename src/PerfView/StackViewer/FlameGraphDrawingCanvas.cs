@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,7 +12,6 @@ namespace PerfView.StackViewer
     public class FlameGraphDrawingCanvas : TransformPanAndZoomCanvas
     {
         private static readonly Typeface Typeface = new Typeface("Consolas");
-        private static readonly Brush[][] Brushes = GenerateBrushes(new Random(12345));
         public event EventHandler<string> CurrentFlameBoxChanged;
         private readonly FlameBoxesMap flameBoxesMap = new FlameBoxesMap();
         private readonly ToolTip tooltip = new ToolTip() { FontSize = 20.0 };
@@ -27,20 +25,42 @@ namespace PerfView.StackViewer
 
         public bool IsEmpty => Visuals.Items.Count == 0;
 
+        private Dictionary<FlameColor, Color> colorsMapping = new Dictionary<FlameColor, Color>() {
+            {FlameColor.Grey,  Color.FromRgb(128, 128, 128)},
+            {FlameColor.Brown,  Color.FromRgb(181, 101, 29)},
+            {FlameColor.Blue,  Color.FromRgb(65, 105, 225)},
+            {FlameColor.Red,  Color.FromRgb(255, 0, 0)}
+        };
+
+        private List<Color> greenShades = new List<Color>(){
+                Color.FromRgb(0,255,0),
+                Color.FromRgb(124,252,0),
+                Color.FromRgb(127,255,0),
+                Color.FromRgb(173,255,47)
+            };
+
         public void Draw(IEnumerable<FlameBox> boxes)
         {
             Clear();
 
-            DrawingVisual visual = new DrawingVisual { Transform = _transform }; // we have only one visual to provide best possible perf
+            var random = new Random(11);
+            var visual = new DrawingVisual { Transform = _transform }; // we have only one visual to provide best possible perf
 
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
-                int index = 0;
                 System.Drawing.Font forSize = null;
 
                 foreach (FlameBox box in boxes)
                 {
-                    Brush brush = Brushes[box.Node.InclusiveMetric < 0 ? 1 : 0][index++ % Brushes.Length]; // use second brush set (aqua theme) for negative metrics
+                    SolidColorBrush brush;
+                    if (box.Color == FlameColor.Default)
+                    {
+                        var id = random.Next(3);
+                        brush = new SolidColorBrush(greenShades[id]);
+                    }
+                    else {
+                        brush = new SolidColorBrush(colorsMapping[box.Color]);
+                    }
 
                     drawingContext.DrawRectangle(
                         brush,
@@ -55,7 +75,7 @@ namespace PerfView.StackViewer
                         }
 
                         FormattedText text = new FormattedText(
-                                box.Node.DisplayName,
+                                box.Text,
                                 CultureInfo.InvariantCulture,
                                 FlowDirection.LeftToRight,
                                 Typeface,
@@ -144,37 +164,6 @@ namespace PerfView.StackViewer
             Visuals.Items.Remove(visual);
 
             RemoveLogicalChild(visual);
-        }
-
-        private static Brush[][] GenerateBrushes(Random random)
-        {
-            Brush[][] brushes = new Brush[][]
-            {
-                Enumerable.Range(0, 100)
-                    .Select(_ => (Brush)new SolidColorBrush(
-                        Color.FromRgb(
-                            (byte)(205.0 + (50.0 * random.NextDouble())),
-                            (byte)(230.0 * random.NextDouble()),
-                            (byte)(55.0 * random.NextDouble()))))
-                    .ToArray(),
-                Enumerable.Range(0, 100)
-                    .Select(_ => (Brush)new SolidColorBrush(
-                        Color.FromRgb(
-                            (byte)(50 + (60.0 * random.NextDouble())),
-                            (byte)(165 + (55.0 * random.NextDouble())),
-                            (byte)(165.0 + (55.0 * random.NextDouble())))))
-                    .ToArray()
-            };
-
-            foreach (Brush[] brushArray in brushes)
-            {
-                foreach (Brush brush in brushArray)
-                {
-                    brush.Freeze(); // this is crucial for performance
-                }
-            }
-
-            return brushes;
         }
 
         private class FlameBoxesMap
