@@ -72,6 +72,7 @@ namespace PerfView
             m_Controls.CornerRadius = new CornerRadius(Padding);
             m_Controls.BorderThickness = new Thickness(1);
             m_Controls.Child = controlsPanel;
+            SetRight(m_Controls, 0);
             Children.Add(m_Controls);
         }
 
