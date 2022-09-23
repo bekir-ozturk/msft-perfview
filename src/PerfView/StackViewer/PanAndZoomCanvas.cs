@@ -45,16 +45,17 @@ namespace PerfView
             MouseLeave += OnMouseLeave;
             MouseWheel += OnMouseWheel;
 
-
             m_VisualsHost = new VisualCollectionHost(this);
             Children.Add(m_VisualsHost);
 
             m_PanningGroupBox.Header = "Panning";
+            m_PanningGroupBox.Background = Brushes.White;
             StackPanel panStackPanel = new StackPanel();
             AddCheckBox(m_PanXAxis, "X-Axis", panStackPanel);
             AddCheckBox(m_PanYAxis, "Y-Axis", panStackPanel);
             m_PanningGroupBox.Content = panStackPanel;
             m_ZoomGroupBox.Header = "Zoom";
+            m_ZoomGroupBox.Background = Brushes.White;
             StackPanel zoomStackPanel = new StackPanel();
             AddCheckBox(m_ZoomXAxis, "X-Axis", zoomStackPanel);
             AddCheckBox(m_ZoomYAxis, "Y-Axis", zoomStackPanel);
@@ -81,7 +82,7 @@ namespace PerfView
 
         protected override Visual GetVisualChild(int index)
         {
-            return index == 0 ? m_Controls : Visuals.Items[index - 1];
+            return index == VisualChildrenCount - 1  ? m_Controls : Visuals.Items[index];
         }
 
         protected abstract Point GetTransformedPosition(Point point);
