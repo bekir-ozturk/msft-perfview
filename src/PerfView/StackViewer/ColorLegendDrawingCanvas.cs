@@ -63,7 +63,7 @@ namespace PerfView
             using (DrawingContext drawingContext = visual.RenderOpen())
             {
 
-                DrawColorLegend(drawingContext, height/30, witdh/3);
+                DrawColorLegend(drawingContext, height/25, witdh/2);
                 AddVisual(visual);
 
                 flameBoxesMap.Sort();
@@ -75,9 +75,12 @@ namespace PerfView
            // var blockSize = 10;
             var gap = blockSize;
 
-            var forSize = new System.Drawing.Font("Consolas", (int)blockSize, System.Drawing.GraphicsUnit.Pixel);
+            var forSize = new System.Drawing.Font("Consolas", (int)blockSize*2, System.Drawing.GraphicsUnit.Pixel);
 
             foreach (var color in FlameBox.MappingToColor) {
+                if (color.Value == FlameColor.Default)
+                    continue;
+
               var rgbColor = colorsMapping[color.Value];
                 drawingContext.DrawRectangle(
                     new SolidColorBrush(rgbColor),

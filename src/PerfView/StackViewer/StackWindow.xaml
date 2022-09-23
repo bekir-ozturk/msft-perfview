@@ -497,7 +497,7 @@
                                 </ContextMenu>
                             </Canvas.ContextMenu>
                         </src:FlameGraphDrawingCanvas>
-                        <src:ColorLegendDrawingCanvas x:Name="ColorLegendcCanvas" ClipToBounds="True" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged" Grid.Column="1" />
+                        <src:ColorLegendDrawingCanvas x:Name="ColorLegendcCanvas" ClipToBounds="True" CurrentFlameBoxChanged="FlameGraphCanvas_CurrentFlameBoxChanged" Grid.Column="1" SizeChanged="FlameGraphCanvas_SizeChanged" />
                     </Grid>
                 </TabItem>
                 <!-- NotesTab -->

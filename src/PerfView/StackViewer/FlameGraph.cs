@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace PerfView
 {
@@ -20,12 +21,14 @@ namespace PerfView
             public readonly CallTreeNode Node;
             public string TooltipText;
             public FlameColor Color;
+            public string Text;
 
             public static Dictionary<string, FlameColor> MappingToColor = new Dictionary<string, FlameColor> {
                 { "ROOT", FlameColor.Grey },
                 { "Process", FlameColor.Brown },
                 { "Thread", FlameColor.Blue },
                 { "BROKEN", FlameColor.Red },
+                { "module", FlameColor.Default }
             };
 
             public FlameBox(CallTreeNode node, double width, double height, double x, double y)
@@ -36,12 +39,13 @@ namespace PerfView
                 Height = height;
                 X = x;
                 Y = y;
-
+                Text = node.DisplayName;
 
                 Color = FlameColor.Default; 
                 foreach (var startWith in MappingToColor) {
                     if (node.DisplayName.StartsWith(startWith.Key))
                     {
+                        Text = node.DisplayName.Remove(0, startWith.Key.Count());
                         Color = startWith.Value;
                     }
                 }

@@ -90,7 +90,7 @@ namespace PerfView
                         }
 
                         var text = new FormattedText(
-                                box.Node.DisplayName,
+                                box.Text,
                                 CultureInfo.InvariantCulture,
                                 FlowDirection.LeftToRight,
                                 Typeface,
