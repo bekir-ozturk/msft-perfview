@@ -1,8 +1,9 @@
-﻿using System.Windows.Controls;
-using System.Windows;
+﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Input;
-using System;
+using GroupBox = System.Windows.Controls.GroupBox;
+using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace PerfView
 {
@@ -49,40 +50,36 @@ namespace PerfView
             Children.Add(m_VisualsHost);
 
             m_PanningGroupBox.Header = "Panning";
-            m_PanningGroupBox.Background = Brushes.White;
             StackPanel panStackPanel = new StackPanel();
             AddCheckBox(m_PanXAxis, "X-Axis", panStackPanel);
             AddCheckBox(m_PanYAxis, "Y-Axis", panStackPanel);
             m_PanningGroupBox.Content = panStackPanel;
             m_ZoomGroupBox.Header = "Zoom";
-            m_ZoomGroupBox.Background = Brushes.White;
             StackPanel zoomStackPanel = new StackPanel();
             AddCheckBox(m_ZoomXAxis, "X-Axis", zoomStackPanel);
             AddCheckBox(m_ZoomYAxis, "Y-Axis", zoomStackPanel);
             m_ZoomGroupBox.Content = zoomStackPanel;
-            m_Controls.Children.Add(m_PanningGroupBox);
-            m_Controls.Children.Add(m_ZoomGroupBox);
 
-            var controlsBorder = new Border
-            {
-                Padding = new Thickness(5),
-                Background = Brushes.White,
-                BorderBrush = Brushes.LightGray,
-                CornerRadius = new CornerRadius(5),
-                BorderThickness = new Thickness(1),
-                Child = m_Controls
-            };
-            Children.Add(controlsBorder);
+            var controlsPanel = new StackPanel();
+            controlsPanel.Children.Add(m_PanningGroupBox);
+            controlsPanel.Children.Add(m_ZoomGroupBox);
 
-            SetZIndex(m_VisualsHost, 100);
-            SetZIndex(controlsBorder, 1);
+            const float Padding = 5;
+            m_Controls.Margin = new Thickness(Padding);
+            m_Controls.Padding = new Thickness(Padding);
+            m_Controls.Background = Brushes.White;
+            m_Controls.BorderBrush = Brushes.LightGray;
+            m_Controls.CornerRadius = new CornerRadius(Padding);
+            m_Controls.BorderThickness = new Thickness(1);
+            m_Controls.Child = controlsPanel;
+            Children.Add(m_Controls);
         }
 
         protected override int VisualChildrenCount => Visuals.Items.Count + 1;
 
         protected override Visual GetVisualChild(int index)
         {
-            return index == VisualChildrenCount - 1  ? m_Controls : Visuals.Items[index];
+            return index == VisualChildrenCount - 1 ? m_Controls : Visuals.Items[index];
         }
 
         protected abstract Point GetTransformedPosition(Point point);
@@ -92,7 +89,7 @@ namespace PerfView
 
         private readonly VisualCollectionHost m_VisualsHost;
 
-        private readonly StackPanel m_Controls = new StackPanel();
+        private readonly Border m_Controls = new Border();
         private readonly GroupBox m_PanningGroupBox = new GroupBox();
         private readonly CheckBox m_PanXAxis = new CheckBox();
         private readonly CheckBox m_PanYAxis = new CheckBox();
@@ -105,14 +102,6 @@ namespace PerfView
         private bool m_IsDragging;
         private Point m_InitialMousePosition;
         private Point m_LastMousePosition;
-
-        private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
-        {
-            checkBox.Content = text;
-            checkBox.IsChecked = true;
-            checkBox.Margin = new Thickness(2);
-            stackPanel.Children.Add(checkBox);
-        }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -140,6 +129,14 @@ namespace PerfView
             {
                 m_IsCtrlDown = true;
             }
+        }
+
+        private static void AddCheckBox(CheckBox checkBox, string text, StackPanel stackPanel)
+        {
+            checkBox.Content = text;
+            checkBox.IsChecked = true;
+            checkBox.Margin = new Thickness(2);
+            _ = stackPanel.Children.Add(checkBox);
         }
 
         private void OnKeyUp(object sender, KeyEventArgs e)

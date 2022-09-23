@@ -1,9 +1,11 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using Pen = System.Windows.Media.Pen;
 using Point = System.Windows.Point;
+using Size = System.Windows.Size;
 
 namespace PerfView
 {
@@ -49,8 +51,11 @@ namespace PerfView
             const int Padding = 5;
             const int TimeRibbonHeight = 20;
             const float FontSize = RowHeight - (2 * Padding);
-            float width = (float)RenderSize.Width;
-            float height = (float)RenderSize.Height;
+
+            float labelsWidth = GetTextWidth("Thread 999999") + (2 * Padding);
+            float labelsHeight = RowHeight + Padding;
+            float width = (float)RenderSize.Width - labelsWidth;
+            float height = (float)RenderSize.Height - labelsHeight;
             int threadsCount = visuals.VisualsPerThreadId.Count;
             float startingFrame = visuals.StartingFrame;
             float endingFrame = visuals.EndingFrame;
@@ -64,7 +69,7 @@ namespace PerfView
                 int visibleFrames = (int)(visuals.EndingFrame - visuals.StartingFrame);
                 double gridPeriod = Math.Pow(10, (int)Math.Log10(visibleFrames));
 
-                double gridStartFrame = visuals.StartingFrame - (visuals.StartingFrame % gridPeriod);
+                double gridStartFrame = visuals.StartingFrame + gridPeriod - (visuals.StartingFrame % gridPeriod);
                 double steps = gridPeriod / 10;
                 double minorLineOpacity = 1 - (visibleFrames - gridPeriod) / gridPeriod;
                 ((SolidColorBrush)_gridMinorLinePen.Brush).Opacity = minorLineOpacity;
@@ -72,7 +77,7 @@ namespace PerfView
                 int iteration = 0;
                 while (gridStartFrame < visuals.EndingFrame)
                 {
-                    double offsetX = (gridStartFrame - startingFrame) * m_PixelsPerUnit;
+                    double offsetX = labelsWidth + ((gridStartFrame - startingFrame) * m_PixelsPerUnit);
                     context.DrawLine(
                         iteration % 10 == 0 ? _gridLinePen : _gridMinorLinePen,
                         new Point(offsetX, TimeRibbonHeight),
@@ -105,6 +110,20 @@ namespace PerfView
                     var threadId = thread.Key;
                     var workVisuals = thread.Value;
 
+                    float startY = i * RowHeight + i * RowGap;
+
+                    context.Text(
+                        "Thread " + threadId,
+                        Typeface,
+                        FontSize,
+                        Padding,
+                        labelsHeight + startY + Padding,
+                        labelsWidth,
+                        RowHeight,
+                        _gridLinePen.Brush,
+                        TextAlignment.Left
+                    );
+
                     foreach (var workVisual in workVisuals)
                     {
                         var brush = new SolidColorBrush(workVisual.DisplayColor);
@@ -112,12 +131,11 @@ namespace PerfView
                             new SolidColorBrush(workVisual.DisplayColor.Scale(0.8)),
                             1.0
                         );
-                        double startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
-                        double startY = TimeRibbonHeight + i * RowHeight + i * RowGap;
-                        double endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
-                        startX = MathExtensions.Clamp(startX, -5, ActualWidth + 5);
-                        endX = MathExtensions.Clamp(endX, -5, ActualWidth + 5);
-                        double workWidth = endX - startX;
+                        float startX = (workVisual.StartingFrame - startingFrame) * m_PixelsPerUnit;
+                        float safeStartX = MathExtensions.Clamp(startX, 0.0f, width);
+                        float endX = (workVisual.EndingFrame - startingFrame) * m_PixelsPerUnit;
+                        float safeEndX = MathExtensions.Clamp(endX, 0.0f, width);
+                        float workWidth = safeEndX - safeStartX;
 
                         if (workWidth < 0.1f)
                         {
@@ -127,15 +145,15 @@ namespace PerfView
                         context.Rectangle(
                             brush,
                             pen,
-                            startX,
-                            startY,
+                            labelsWidth + safeStartX,
+                            labelsHeight + startY,
                             workWidth,
                             RowHeight,
                             Padding
                         );
 
                         double textWidth = workWidth - (2 * Padding);
-                        if (textWidth < 5f)
+                        if (textWidth < 5)
                         {
                             continue;
                         }
@@ -149,11 +167,12 @@ namespace PerfView
                             workVisual.DisplayName,
                             Typeface,
                             FontSize,
-                            startX + Padding,
-                            startY + Padding,
+                            labelsWidth + safeStartX + Padding,
+                            labelsHeight + startY + Padding,
                             textWidth,
                             RowHeight,
-                            Brushes.Black
+                            _gridLinePen.Brush,
+                            TextAlignment.Center
                         );
                     }
                 }
@@ -183,6 +202,14 @@ namespace PerfView
             float timeOffset = (float)center.X / m_PixelsPerUnit;
             float scale = (float)delta.X;
             Zoom.Invoke(this, new ZoomEventArgs { TimeOffset = timeOffset, Scale = scale });
+        }
+
+        private float GetTextWidth(string text)
+        {
+            var textBlock = new TextBlock { Text = text };
+            textBlock.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+            textBlock.Arrange(new Rect(textBlock.DesiredSize));
+            return (float)textBlock.ActualWidth;
         }
 
         private static readonly Typeface Typeface = new Typeface("Consolas");
