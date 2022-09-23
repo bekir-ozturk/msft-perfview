@@ -49,7 +49,6 @@ namespace PerfView
             const int RowGap = 5;
             const int RowHeight = 20;
             const int Padding = 5;
-            const int TimeRibbonHeight = 20;
             const float FontSize = RowHeight - (2 * Padding);
 
             float labelsWidth = GetTextWidth("Thread 999999") + (2 * Padding);
@@ -80,8 +79,8 @@ namespace PerfView
                     double offsetX = labelsWidth + ((gridStartFrame - startingFrame) * m_PixelsPerUnit);
                     context.DrawLine(
                         iteration % 10 == 0 ? _gridLinePen : _gridMinorLinePen,
-                        new Point(offsetX, TimeRibbonHeight),
-                        new Point(offsetX, 1000));
+                        new Point(offsetX, RowHeight),
+                        new Point(offsetX, RenderSize.Height));
 
                     if (iteration % 10 == 0 || minorLineOpacity > 0) 
                     {
@@ -90,11 +89,12 @@ namespace PerfView
                             Typeface,
                             FontSize,
                             offsetX - 100,
-                            0,
+                            Padding,
                             200,
-                            TimeRibbonHeight,
+                            RowHeight,
                             iteration % 10 == 0 ? _gridLinePen.Brush : _gridMinorLinePen.Brush,
-                            TextAlignment.Center);
+                            TextAlignment.Center
+                        );
                     }
 
                     iteration++;
