@@ -16,7 +16,6 @@
                 Background="White"
                 Visibility="Collapsed"
                 />
-            <ScrollBar DockPanel.Dock="Bottom" Orientation="Horizontal" Minimum="0" Maximum="20000" ViewportSize="5000"/>
             <src:TimelineFocusCanvas x:Name="FocusCanvas" Background="White" ClipToBounds="True"/>
         </DockPanel>
         <Label Name="InfoLabel" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" >Failed to load</Label>
